@@ -57,14 +57,13 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
       );
     }
 
-    final initialRoute =
-        _userProvider.profile.onboardingCompleted ? '/home' : '/onboarding';
-
     return MaterialApp(
       title: '渴了么',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      initialRoute: initialRoute,
+      home: _userProvider.profile.onboardingCompleted
+          ? HomeScreen(userProvider: _userProvider)
+          : OnboardingScreen(userProvider: _userProvider),
       routes: {
         '/onboarding': (_) => OnboardingScreen(userProvider: _userProvider),
         '/home': (_) => HomeScreen(userProvider: _userProvider),

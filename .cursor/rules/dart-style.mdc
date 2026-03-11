@@ -1,0 +1,67 @@
+---
+description: Dart language style guide for Flutter projects
+globs: ["**/*.dart"]
+alwaysApply: true
+---
+
+# Dart Style Guide
+
+## Naming Conventions
+- Classes: `UpperCamelCase` (e.g., `ChatScreen`, `MessageWidget`)
+- Variables/Functions: `lowerCamelCase` (e.g., `userName`, `sendMessage()`)
+- Constants: `lowerCamelCase` (e.g., `defaultTimeout`)
+- Private: prefix with `_` (e.g., `_privateMethod()`)
+- Files: `snake_case` (e.g., `chat_screen.dart`)
+
+## Import Order
+1. Dart SDK imports (`dart:`)
+2. Flutter imports (`package:flutter/`)
+3. Third-party packages (`package:`)
+4. Local imports (relative paths)
+
+```dart
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import 'package:firebase_ai/firebase_ai.dart';
+import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+
+import '../widgets/chat_widget.dart';
+```
+
+## Widget Best Practices
+```dart
+// Prefer const constructors
+const MyWidget({super.key});
+
+// Use named parameters
+Widget build({
+  required String title,
+  String? subtitle,
+  VoidCallback? onTap,
+});
+
+// Extract build methods for complex widgets
+Widget _buildHeader() { ... }
+Widget _buildContent() { ... }
+```
+
+## Async/Await
+```dart
+// Always handle errors
+Future<void> loadData() async {
+  try {
+    final result = await api.fetchData();
+    setState(() => data = result);
+  } catch (e) {
+    // Handle error appropriately
+    debugPrint('Error: $e');
+  }
+}
+```
+
+## Documentation
+- Use `///` for public API documentation
+- Keep comments concise and meaningful
+- Document complex logic, not obvious code

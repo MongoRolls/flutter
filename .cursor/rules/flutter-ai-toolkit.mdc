@@ -1,0 +1,68 @@
+---
+description: Flutter AI Toolkit development rules and best practices
+globs: ["**/*.dart"]
+alwaysApply: false
+---
+
+# Flutter AI Toolkit Development Rules
+
+## Project Context
+This project uses Flutter AI Toolkit with Firebase AI (Gemini/Vertex AI) for building AI-powered chat applications.
+
+## Code Style Rules
+
+### Dart Conventions
+- Use `const` constructors wherever possible
+- Prefer `final` over `var` for immutable variables
+- Use named parameters for functions with more than 2 parameters
+- Follow lowerCamelCase for variables, functions, and parameters
+- Follow UpperCamelCase for classes and types
+
+### Widget Structure
+- Keep widgets small and focused
+- Extract reusable widgets into separate files
+- Use `StatelessWidget` when state is not needed
+- Prefer composition over inheritance
+
+### Firebase AI Integration
+```dart
+// For prototyping (Gemini endpoint)
+FirebaseAI.googleAI().generativeModel(model: 'gemini-2.5-flash')
+
+// For production (Vertex AI endpoint)
+FirebaseAI.vertexAI().generativeModel(model: 'gemini-2.5-flash')
+```
+
+### LlmChatView Configuration
+```dart
+LlmChatView(
+  provider: FirebaseProvider(
+    model: FirebaseAI.vertexAI().generativeModel(
+      model: 'gemini-2.5-flash',
+    ),
+  ),
+  // Optional: custom styling, attachments, voice input
+)
+```
+
+## File Organization
+- `lib/main.dart` - App entry with Firebase init
+- `lib/screens/` - Screen widgets
+- `lib/widgets/` - Reusable widgets
+- `lib/services/` - Business logic
+- `lib/models/` - Data models
+
+## Error Handling
+- Always handle async errors with try-catch
+- Show user-friendly error messages
+- Log errors for debugging
+
+## Performance
+- Use `const` widgets to prevent unnecessary rebuilds
+- Implement proper state management
+- Avoid expensive operations in build methods
+
+## Testing
+- Write unit tests for business logic
+- Write widget tests for UI components
+- Use mock providers for AI testing

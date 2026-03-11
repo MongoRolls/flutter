@@ -67,8 +67,3 @@ GoogleService-Info.plist
 
 # Coverage
 coverage/
-
-
-.claude
-.cursor
-.agents

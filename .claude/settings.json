@@ -1,0 +1,46 @@
+{
+  "project": {
+    "name": "Flutter AI Toolkit Project",
+    "type": "flutter",
+    "language": "dart"
+  },
+  "ai": {
+    "provider": "firebase_ai",
+    "models": ["gemini-2.5-flash", "gemini-2.0-flash"],
+    "endpoint": {
+      "prototyping": "googleAI",
+      "production": "vertexAI"
+    }
+  },
+  "dependencies": {
+    "core": [
+      "flutter_ai_toolkit",
+      "firebase_ai",
+      "firebase_core"
+    ],
+    "optional": [
+      "record",
+      "file_selector",
+      "image_picker"
+    ]
+  },
+  "platforms": {
+    "android": {
+      "minSdk": 21,
+      "permissions": ["INTERNET"]
+    },
+    "ios": {
+      "minVersion": "12.0"
+    },
+    "macos": {
+      "minVersion": "10.15",
+      "entitlements": ["com.apple.security.network.client"]
+    },
+    "web": true
+  },
+  "codeStyle": {
+    "formatter": "dart format",
+    "analyzer": "flutter analyze",
+    "lineLength": 80
+  }
+}
