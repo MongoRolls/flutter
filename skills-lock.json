@@ -1,10 +1,30 @@
 {
   "version": 1,
   "skills": {
+    "flutter-animations": {
+      "source": "madteacher/mad-agents-skills",
+      "sourceType": "github",
+      "computedHash": "dcd68fd024e5631a841125645a23c9828158cd76505ba6c019c09b828c04f626"
+    },
+    "flutter-expert": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "273a5eeae0e1e61e47039ca3abc4884e8479dec8d28c6d851c79c77ad039e63f"
+    },
     "flutter-layout": {
       "source": "flutter/skills",
       "sourceType": "github",
       "computedHash": "39097d1c7f69f59a965f4475f1d11f649ded2680c154c072579f75ac536138b9"
+    },
+    "flutter-performance": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "66ce2d80fdefd9ce89ec11d85e6f904bcf842cb64893b3e68eabbaf28523e8bc"
+    },
+    "flutter-theming": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "f13a39f9b33925cc1a63d55e74d93a18d422a6a9e991f869b7a58155b5276dfd"
     }
   }
 }
