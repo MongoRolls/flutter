@@ -44,7 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _intervalMin = profile.reminderIntervalMin;
   }
 
-  void _save() {
+  Future<void> _save() async {
     final profile = _p.profile;
     profile.weight = _weight;
     profile.dailyGoalMl = _goalMl;
@@ -60,24 +60,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // 根据通知开关状态调度或取消通知
     if (_notificationsEnabled) {
-      NotificationService.instance.scheduleReminders(
-        wakeTime: _wakeTime,
-        bedTime: _bedTime,
-        intervalMin: _intervalMin,
-        reminderStyle: _reminderStyle,
-      );
+      final granted = await NotificationService.instance.requestPermission();
+      if (granted) {
+        await NotificationService.instance.scheduleReminders(
+          wakeTime: _wakeTime,
+          bedTime: _bedTime,
+          intervalMin: _intervalMin,
+          reminderStyle: _reminderStyle,
+        );
+      }
     } else {
-      NotificationService.instance.cancelAll();
+      await NotificationService.instance.cancelAll();
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('设置已保存 ✓'),
-        backgroundColor: AppColors.bgCard,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('设置已保存 ✓',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.textPrimary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   @override
@@ -443,18 +449,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showTestReminder() {
-    NotificationService.instance.showTestNotification(
+  Future<void> _showTestReminder() async {
+    // 先确保权限已授予
+    final granted = await NotificationService.instance.requestPermission();
+    if (!granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('未获得通知权限，请在系统设置中开启'),
+          backgroundColor: AppColors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+    await NotificationService.instance.showTestNotification(
       reminderStyle: _reminderStyle,
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('已发送测试通知，请查看通知栏'),
-        backgroundColor: AppColors.bgCard,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('已发送测试通知，请查看通知栏',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.blue,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   Widget _sectionTitle(String emoji, String text) => Padding(
