@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../providers/user_provider.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/glass_card.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -56,6 +57,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     profile.bedTime = _bedTime;
     profile.reminderIntervalMin = _intervalMin;
     _p.updateProfile(profile);
+
+    // 根据通知开关状态调度或取消通知
+    if (_notificationsEnabled) {
+      NotificationService.instance.scheduleReminders(
+        wakeTime: _wakeTime,
+        bedTime: _bedTime,
+        intervalMin: _intervalMin,
+        reminderStyle: _reminderStyle,
+      );
+    } else {
+      NotificationService.instance.cancelAll();
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('设置已保存 ✓'),
@@ -430,41 +444,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showTestReminder() {
-    final messages = [
-      '距上次喝水已过 90 分钟，来一杯吧 💧',
-      '工作再忙也要记得喝水哦 🌊',
-      '今天天气干燥，记得多补充水分 🌬',
-    ];
-    final msg = (messages..shuffle()).first;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
+    NotificationService.instance.showTestNotification(
+      reminderStyle: _reminderStyle,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('已发送测试通知，请查看通知栏'),
         backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Text('💧', style: TextStyle(fontSize: 24)),
-            SizedBox(width: 8),
-            Text('喝水提醒',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-          ],
-        ),
-        content: Text(msg,
-            style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.6)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('稍后', style: TextStyle(color: AppColors.textHint)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _p.addDrink(250, desc: '提醒后补水');
-              Navigator.pop(ctx);
-            },
-            child: const Text('喝了 250ml'),
-          ),
-        ],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user_profile.dart';
 import '../../providers/user_provider.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/glass_card.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -52,6 +53,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } else {
       _finishOnboarding();
     }
+  }
+
+  Future<void> _enableNotificationsAndFinish() async {
+    await NotificationService.instance.requestPermission();
+    await NotificationService.instance.scheduleReminders(
+      wakeTime: _wakeTime,
+      bedTime: _bedTime,
+      intervalMin: _reminderInterval,
+    );
+    await _finishOnboarding();
   }
 
   Future<void> _finishOnboarding() async {
@@ -445,7 +456,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _finishOnboarding,
+              onPressed: _enableNotificationsAndFinish,
               child: const Text('开启通知，开始使用'),
             ),
           ),
