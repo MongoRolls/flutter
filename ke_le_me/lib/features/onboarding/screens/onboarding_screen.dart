@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../theme/app_theme.dart';
-import '../../models/user_profile.dart';
-import '../../providers/user_provider.dart';
-import '../../services/notification_service.dart';
-import '../../widgets/glass_card.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/models/user_profile.dart';
+import '../../../core/providers/user_provider.dart';
+import '../../../core/services/notification_service.dart';
+import '../../../common/widgets/glass_card.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final UserProvider userProvider;

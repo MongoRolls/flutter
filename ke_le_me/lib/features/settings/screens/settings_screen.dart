@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
-import '../../providers/user_provider.dart';
-import '../../services/notification_service.dart';
-import '../../widgets/glass_card.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/providers/user_provider.dart';
+import '../../../core/services/notification_service.dart';
+import '../../../common/widgets/glass_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   final UserProvider userProvider;
@@ -21,12 +21,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _goalMl;
   late String _reminderStyle;
   late bool _notificationsEnabled;
-  late bool _exerciseReminder;
-  late bool _meetingPause;
-  late bool _morningPlan;
   late String _wakeTime;
   late String _bedTime;
   late int _intervalMin;
+
+  int _debugTapCount = 0;
+  DateTime? _lastDebugTap;
 
   @override
   void initState() {
@@ -36,9 +36,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _goalMl = profile.dailyGoalMl;
     _reminderStyle = profile.reminderStyle;
     _notificationsEnabled = profile.notificationsEnabled;
-    _exerciseReminder = profile.exerciseReminderEnabled;
-    _meetingPause = profile.meetingPauseEnabled;
-    _morningPlan = profile.morningPlanEnabled;
     _wakeTime = profile.wakeTime;
     _bedTime = profile.bedTime;
     _intervalMin = profile.reminderIntervalMin;
@@ -50,9 +47,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     profile.dailyGoalMl = _goalMl;
     profile.reminderStyle = _reminderStyle;
     profile.notificationsEnabled = _notificationsEnabled;
-    profile.exerciseReminderEnabled = _exerciseReminder;
-    profile.meetingPauseEnabled = _meetingPause;
-    profile.morningPlanEnabled = _morningPlan;
     profile.wakeTime = _wakeTime;
     profile.bedTime = _bedTime;
     profile.reminderIntervalMin = _intervalMin;
@@ -74,15 +68,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('设置已保存 ✓',
-              style: TextStyle(color: Colors.white)),
-          backgroundColor: AppColors.textPrimary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: const Text('设置已保存 ✓',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.textPrimary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
     }
   }
 
@@ -102,6 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildReminderSwitches(),
                   _buildReminderTime(),
                   _buildTestButton(),
+                  _buildVersionInfo(),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -251,16 +248,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 4),
           _switchRow('推送通知', '锁屏显示喝水提醒', Icons.notifications_outlined,
               AppColors.blue, _notificationsEnabled,
-              (v) => setState(() => _notificationsEnabled = v)),
-          _switchRow('运动后增强提醒', '运动结束立即推送', Icons.directions_run,
-              AppColors.orange, _exerciseReminder,
-              (v) => setState(() => _exerciseReminder = v)),
-          _switchRow('会议期间暂停', '日历有会议时暂停', Icons.event_available,
-              AppColors.purple, _meetingPause,
-              (v) => setState(() => _meetingPause = v)),
-          _switchRow('早间规划提醒', '每天 8:00 提示输入安排', Icons.wb_sunny_outlined,
-              AppColors.green, _morningPlan,
-              (v) => setState(() => _morningPlan = v), showDivider: false),
+              (v) => setState(() => _notificationsEnabled = v), showDivider: false),
         ],
       ),
     );
@@ -450,33 +438,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showTestReminder() async {
-    // 先确保权限已授予
-    final granted = await NotificationService.instance.requestPermission();
-    if (!granted && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('未获得通知权限，请在系统设置中开启'),
-          backgroundColor: AppColors.orange,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      return;
-    }
     await NotificationService.instance.showTestNotification(
       reminderStyle: _reminderStyle,
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('已发送测试通知，请查看通知栏',
-              style: TextStyle(color: Colors.white)),
-          backgroundColor: AppColors.blue,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+  }
+
+  void _onVersionTap() {
+    final now = DateTime.now();
+    if (_lastDebugTap != null && now.difference(_lastDebugTap!).inSeconds > 3) {
+      _debugTapCount = 0;
     }
+    _lastDebugTap = now;
+    _debugTapCount++;
+    if (_debugTapCount >= 5) {
+      _debugTapCount = 0;
+      Navigator.pushNamed(context, '/debug');
+    }
+  }
+
+  Widget _buildVersionInfo() {
+    return GestureDetector(
+      onTap: _onVersionTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          children: [
+            Text(
+              '渴了么 v1.0.0',
+              style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'KE LE ME · 本地版',
+              style: const TextStyle(fontSize: 10, color: AppColors.divider),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _sectionTitle(String emoji, String text) => Padding(

@@ -9,9 +9,6 @@ class UserProfile {
   int reminderIntervalMin;
   String reminderStyle;
   bool notificationsEnabled;
-  bool exerciseReminderEnabled;
-  bool meetingPauseEnabled;
-  bool morningPlanEnabled;
   bool onboardingCompleted;
 
   UserProfile({
@@ -25,9 +22,6 @@ class UserProfile {
     this.reminderIntervalMin = 90,
     this.reminderStyle = '温柔',
     this.notificationsEnabled = true,
-    this.exerciseReminderEnabled = true,
-    this.meetingPauseEnabled = false,
-    this.morningPlanEnabled = false,
     this.onboardingCompleted = false,
   });
 
@@ -44,9 +38,6 @@ class UserProfile {
         'reminderIntervalMin': reminderIntervalMin,
         'reminderStyle': reminderStyle,
         'notificationsEnabled': notificationsEnabled,
-        'exerciseReminderEnabled': exerciseReminderEnabled,
-        'meetingPauseEnabled': meetingPauseEnabled,
-        'morningPlanEnabled': morningPlanEnabled,
         'onboardingCompleted': onboardingCompleted,
       };
 
@@ -61,9 +52,6 @@ class UserProfile {
         reminderIntervalMin: m['reminderIntervalMin'] ?? 90,
         reminderStyle: m['reminderStyle'] ?? '温柔',
         notificationsEnabled: m['notificationsEnabled'] ?? true,
-        exerciseReminderEnabled: m['exerciseReminderEnabled'] ?? true,
-        meetingPauseEnabled: m['meetingPauseEnabled'] ?? false,
-        morningPlanEnabled: m['morningPlanEnabled'] ?? false,
         onboardingCompleted: m['onboardingCompleted'] ?? false,
       );
 }

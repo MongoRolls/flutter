@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'theme/app_theme.dart';
-import 'providers/user_provider.dart';
-import 'services/notification_service.dart';
-import 'screens/onboarding/onboarding_screen.dart';
-import 'screens/home/home_screen.dart';
-import 'screens/settings/settings_screen.dart';
+import 'core/theme/app_theme.dart';
+import 'core/providers/user_provider.dart';
+import 'core/services/notification_service.dart';
+import 'features/onboarding/screens/onboarding_screen.dart';
+import 'features/home/screens/home_screen.dart';
+import 'features/settings/screens/settings_screen.dart';
+import 'features/debug/screens/debug_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +81,7 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
         '/onboarding': (_) => OnboardingScreen(userProvider: _userProvider),
         '/home': (_) => HomeScreen(userProvider: _userProvider),
         '/settings': (_) => SettingsScreen(userProvider: _userProvider),
+        '/debug': (_) => DebugScreen(userProvider: _userProvider),
       },
     );
   }

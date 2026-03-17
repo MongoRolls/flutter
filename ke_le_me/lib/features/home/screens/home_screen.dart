@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../theme/app_theme.dart';
-import '../../providers/user_provider.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/progress_ring.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/providers/user_provider.dart';
+import '../../../common/widgets/glass_card.dart';
+import '../../../common/widgets/progress_ring.dart';
 
 class HomeScreen extends StatefulWidget {
   final UserProvider userProvider;
@@ -16,9 +16,12 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _ringAnimController;
   late Animation<double> _ringAnim;
+  late AnimationController _entranceController;
+  late AnimationController _celebrateController;
+  late Animation<double> _celebrateAnim;
 
   UserProvider get _p => widget.userProvider;
 
@@ -33,18 +36,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       parent: _ringAnimController,
       curve: Curves.easeOutCubic,
     );
+
+    // 列表入场交错动画
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    // 达标庆祝弹跳动画
+    _celebrateController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _celebrateAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 1.15, end: 0.95), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 40),
+    ]).animate(CurvedAnimation(
+      parent: _celebrateController,
+      curve: Curves.easeInOut,
+    ));
+
     _ringAnimController.forward();
+    _entranceController.forward();
     _p.addListener(_onDataChanged);
   }
 
   void _onDataChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      // 检查是否刚达标
+      if (_p.progress >= 1.0 && !_celebrateController.isAnimating) {
+        _celebrateController.forward(from: 0);
+      }
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
     _p.removeListener(_onDataChanged);
     _ringAnimController.dispose();
+    _entranceController.dispose();
+    _celebrateController.dispose();
     super.dispose();
   }
 
@@ -120,17 +153,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.blueLight,
-            ),
-            child: Center(
-              child: Text('渴',
-                  style: GoogleFonts.notoSansSc(
-                      fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.blue)),
+          GestureDetector(
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.blueLight,
+              ),
+              child: Center(
+                child: Text('渴',
+                    style: GoogleFonts.notoSansSc(
+                        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.blue)),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -170,95 +205,115 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildHeroCard(String greeting, String name, DateTime now) {
     final pct = (_p.progress * 100).round();
-    return GlassCard(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('👋 $greeting，$name',
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${now.year}年${now.month}月${now.day}日',
-                      style: const TextStyle(fontSize: 11, color: AppColors.textHint),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: pct >= 100 ? AppColors.greenLight : AppColors.blueLight,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  pct >= 100 ? '🎉 已达标！' : '今日 $pct%',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: pct >= 100 ? AppColors.green : AppColors.blue,
+    return AnimatedBuilder(
+      animation: _celebrateAnim,
+      builder: (_, child) => Transform.scale(
+        scale: _celebrateAnim.value,
+        child: child,
+      ),
+      child: GlassCard(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('👋 $greeting，$name',
+                          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${now.year}年${now.month}月${now.day}日',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              AnimatedBuilder(
-                animation: _ringAnim,
-                builder: (_, child) => ProgressRing(
-                  progress: _p.progress * _ringAnim.value,
-                  currentMl: _p.todayMl,
-                  goalMl: _p.profile.dailyGoalMl,
-                  size: 120,
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '还差 ${_p.remainingMl}ml',
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                    scale: anim,
+                    child: child,
+                  ),
+                  child: Container(
+                    key: ValueKey(pct >= 100),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: pct >= 100 ? AppColors.greenLight : AppColors.blueLight,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '目标 ${_p.profile.dailyGoalMl}ml',
-                      style: const TextStyle(fontSize: 11, color: AppColors.textHint),
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _showQuickDrinkSheet,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('💧 ', style: TextStyle(fontSize: 14)),
-                            Text('喝水打卡',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                          ],
-                        ),
+                    child: Text(
+                      pct >= 100 ? '🎉 已达标！' : '今日 $pct%',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: pct >= 100 ? AppColors.green : AppColors.blue,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _ringAnim,
+                  builder: (_, child) => ProgressRing(
+                    progress: _p.progress * _ringAnim.value,
+                    currentMl: _p.todayMl,
+                    goalMl: _p.profile.dailyGoalMl,
+                    size: 120,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: _p.remainingMl),
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeOut,
+                        builder: (_, value, _) => Text(
+                          '还差 ${value}ml',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '目标 ${_p.profile.dailyGoalMl}ml',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _showQuickDrinkSheet,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('💧 ', style: TextStyle(fontSize: 14)),
+                              Text('喝水打卡',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -270,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           _miniStatCard('${_p.logs.length}', '今日打卡', AppColors.blue, AppColors.blueLight),
           const SizedBox(width: 10),
-          _miniStatCard('7', '🔥连续天数', AppColors.orange, AppColors.orangeLight),
+          _miniStatCard('${_p.streakDays}', '🔥连续天数', AppColors.orange, AppColors.orangeLight),
           const SizedBox(width: 10),
           _miniStatCard(
             '${_scheduleItems.where((s) => s.status == 'pending').length}',
@@ -317,6 +372,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildScheduleCard() {
+    final items = _scheduleItems;
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,13 +397,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   color: AppColors.blueLight,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text('AI 生成',
+                child: const Text('智能规划',
                     style: TextStyle(fontSize: 10, color: AppColors.blue, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          ..._scheduleItems.map(_buildScheduleRow),
+          ...List.generate(items.length, (index) {
+            final intervalStart = (index * 0.08).clamp(0.0, 0.7);
+            final intervalEnd = (intervalStart + 0.3).clamp(0.0, 1.0);
+            final slideAnim = Tween<Offset>(
+              begin: const Offset(0.3, 0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: _entranceController,
+              curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOutCubic),
+            ));
+            final fadeAnim = CurvedAnimation(
+              parent: _entranceController,
+              curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOut),
+            );
+            return FadeTransition(
+              opacity: fadeAnim,
+              child: SlideTransition(
+                position: slideAnim,
+                child: _buildScheduleRow(items[index]),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -383,6 +460,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: const Text('现在',
               style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
         );
+      case 'missed':
+        bgColor = Colors.transparent;
+        borderColor = null;
+        statusWidget = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.orangeLight,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text('未打卡',
+              style: TextStyle(fontSize: 10, color: AppColors.orange, fontWeight: FontWeight.w600)),
+        );
       default:
         bgColor = Colors.transparent;
         borderColor = null;
@@ -398,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
 
     return Opacity(
-      opacity: item.status == 'pending' ? 0.5 : 1.0,
+      opacity: item.status == 'pending' ? 0.5 : (item.status == 'missed' ? 0.7 : 1.0),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -433,7 +522,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildStreakCalendar(DateTime now) {
     final today = now.day;
-    final hits = {1, 2, 3, 5, 6, 8, 9, 10, 11, 12};
+    final monthlyHits = _p.monthlyHits;
+    final goalMl = _p.profile.dailyGoalMl;
+    // 获取本月天数
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    // 达标天数
+    final achievedDays = monthlyHits.entries
+        .where((e) => e.key < today && e.value >= goalMl)
+        .length;
 
     return GlassCard(
       child: Column(
@@ -451,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   style: TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
               const Spacer(),
-              Text('🔥 连续 ${hits.where((d) => d < today).length} 天',
+              Text('🔥 连续 ${_p.streakDays} 天',
                   style: const TextStyle(fontSize: 11, color: AppColors.orange, fontWeight: FontWeight.w600)),
             ],
           ),
@@ -459,11 +555,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Wrap(
             spacing: 5,
             runSpacing: 5,
-            children: List.generate(31, (i) {
+            children: List.generate(daysInMonth, (i) {
               final d = i + 1;
-              Color bg;
               Color textColor;
               BoxDecoration deco;
+              final dayMl = monthlyHits[d] ?? 0;
+              final achieved = dayMl >= goalMl;
 
               if (d == today) {
                 deco = BoxDecoration(
@@ -472,7 +569,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   boxShadow: [BoxShadow(color: AppColors.blue.withValues(alpha: 0.4), blurRadius: 8)],
                 );
                 textColor = Colors.white;
-              } else if (d < today && hits.contains(d)) {
+              } else if (d < today && achieved) {
                 deco = BoxDecoration(
                   color: AppColors.blueLight,
                   borderRadius: BorderRadius.circular(8),
@@ -486,8 +583,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 );
                 textColor = AppColors.textHint;
               } else {
-                bg = AppColors.bgSection;
-                deco = BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8));
+                deco = BoxDecoration(
+                  color: AppColors.bgSection,
+                  borderRadius: BorderRadius.circular(8),
+                );
                 textColor = AppColors.divider;
               }
 
@@ -513,6 +612,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               _legendDot(AppColors.blue, '达标'),
               const SizedBox(width: 12),
               _legendDot(AppColors.bgSection, '未达标'),
+              const Spacer(),
+              Text('本月 $achievedDays 天达标',
+                  style: const TextStyle(fontSize: 10, color: AppColors.textHint)),
             ],
           ),
         ],
@@ -536,17 +638,82 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   List<_ScheduleItem> get _scheduleItems {
     final hour = DateTime.now().hour;
-    return [
-      _ScheduleItem('07:30', '💧', '晨起空腹温水', 300, hour > 7 ? 'done' : 'pending'),
-      _ScheduleItem('09:00', '☕', '上午提神咖啡', 200, hour > 9 ? 'done' : (hour >= 9 ? 'current' : 'pending')),
-      _ScheduleItem('10:30', '💧', '工作间隙水', 250, hour > 10 ? 'done' : (hour >= 10 ? 'current' : 'pending')),
-      _ScheduleItem('12:15', '🥛', '午餐牛奶', 200, hour > 12 ? 'done' : (hour >= 12 ? 'current' : 'pending')),
-      _ScheduleItem('14:30', '💧', '下午补水', 300, hour > 14 ? 'done' : (hour >= 14 ? 'current' : 'pending')),
-      _ScheduleItem('16:00', '💧', '会议后补水', 250, hour > 16 ? 'done' : (hour >= 16 ? 'current' : 'pending')),
-      _ScheduleItem('17:30', '🏃', '健身前补水', 300, hour > 17 ? 'done' : (hour >= 17 ? 'current' : 'pending')),
-      _ScheduleItem('19:00', '💧', '运动后补水', 400, hour > 19 ? 'done' : (hour >= 19 ? 'current' : 'pending')),
-      _ScheduleItem('21:00', '💧', '睡前温水', 200, hour > 21 ? 'done' : (hour >= 21 ? 'current' : 'pending')),
+    final minute = DateTime.now().minute;
+    final nowMinutes = hour * 60 + minute;
+
+    // 根据用户设置动态生成时间表
+    final wakeParts = _p.profile.wakeTime.split(':');
+    final bedParts = _p.profile.bedTime.split(':');
+    final wakeHour = int.parse(wakeParts[0]);
+    final wakeMinute = int.parse(wakeParts[1]);
+    final bedHour = int.parse(bedParts[0]);
+    final bedMinute = int.parse(bedParts[1]);
+    final intervalMin = _p.profile.reminderIntervalMin;
+
+    final wakeTotal = wakeHour * 60 + wakeMinute;
+    final bedTotal = bedHour * 60 + bedMinute;
+    final totalMl = _p.profile.dailyGoalMl;
+
+    // 计算时间点
+    final items = <_ScheduleItem>[];
+    var currentMin = wakeTotal;
+    var slotIndex = 0;
+
+    // 饮水描述和图标轮替
+    const descs = [
+      ('💧', '晨起空腹温水'),
+      ('☕', '工作提神饮品'),
+      ('💧', '工作间隙补水'),
+      ('🥛', '午餐补水'),
+      ('💧', '下午补水'),
+      ('💧', '休息补水'),
+      ('💧', '傍晚补水'),
+      ('💧', '晚间补水'),
+      ('💧', '睡前温水'),
     ];
+
+    while (currentMin < bedTotal) {
+      final h = currentMin ~/ 60;
+      final m = currentMin % 60;
+      final timeStr = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+      final descIndex = slotIndex % descs.length;
+      final (icon, desc) = descs[descIndex];
+
+      // 计算每个时段推荐饮水量
+      final totalSlots = ((bedTotal - wakeTotal) / intervalMin).ceil();
+      final mlPerSlot = totalSlots > 0 ? (totalMl / totalSlots).round() : 250;
+
+      // 判断状态：检查该时段前后是否有实际饮水记录
+      String status;
+      final slotStart = currentMin;
+      final slotEnd = currentMin + intervalMin;
+
+      if (nowMinutes < slotStart) {
+        status = 'pending';
+      } else if (nowMinutes >= slotStart && nowMinutes < slotEnd) {
+        // 当前时段，检查是否已有打卡
+        final hasLog = _p.logs.any((log) {
+          final logParts = log.time.split(':');
+          final logMin = int.parse(logParts[0]) * 60 + int.parse(logParts[1]);
+          return logMin >= slotStart && logMin < slotEnd;
+        });
+        status = hasLog ? 'done' : 'current';
+      } else {
+        // 已过去的时段，检查是否有打卡
+        final hasLog = _p.logs.any((log) {
+          final logParts = log.time.split(':');
+          final logMin = int.parse(logParts[0]) * 60 + int.parse(logParts[1]);
+          return logMin >= slotStart && logMin < slotEnd;
+        });
+        status = hasLog ? 'done' : 'missed';
+      }
+
+      items.add(_ScheduleItem(timeStr, icon, desc, mlPerSlot, status));
+      currentMin += intervalMin;
+      slotIndex++;
+    }
+
+    return items;
   }
 }
 
