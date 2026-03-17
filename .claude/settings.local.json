@@ -11,7 +11,12 @@
       "Bash(flutter test:*)",
       "WebSearch",
       "Bash(flutter clean:*)",
-      "Bash(flutter pub:*)"
+      "Bash(flutter pub:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(flutter build:*)",
+      "Bash(flutter doctor:*)",
+      "Bash(pod install:*)",
+      "Bash(flutter format:*)"
     ]
   }
 }

@@ -8,6 +8,7 @@ import 'features/onboarding/screens/onboarding_screen.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/debug/screens/debug_screen.dart';
+import 'features/chat/screens/chat_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +83,7 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
         '/home': (_) => HomeScreen(userProvider: _userProvider),
         '/settings': (_) => SettingsScreen(userProvider: _userProvider),
         '/debug': (_) => DebugScreen(userProvider: _userProvider),
+        '/chat': (_) => ChatScreen(userProvider: _userProvider),
       },
     );
   }

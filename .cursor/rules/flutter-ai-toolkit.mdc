@@ -1,9 +1,7 @@
 ---
 description: Flutter AI Toolkit development rules and best practices
-globs: ["**/*.dart"]
 alwaysApply: false
 ---
-
 # Flutter AI Toolkit Development Rules
 
 ## Project Context

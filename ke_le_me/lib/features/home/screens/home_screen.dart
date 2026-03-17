@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/models/drink_log.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../common/widgets/glass_card.dart';
@@ -22,6 +23,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _entranceController;
   late AnimationController _celebrateController;
   late Animation<double> _celebrateAnim;
+
+  // 彩蛋：连续点击 logo 5次进入 debug 页
+  int _logoTapCount = 0;
+  DateTime? _lastLogoTap;
 
   UserProvider get _p => widget.userProvider;
 
@@ -69,6 +74,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _celebrateController.forward(from: 0);
       }
       setState(() {});
+    }
+  }
+
+  void _onLogoTap() {
+    final now = DateTime.now();
+    if (_lastLogoTap == null || now.difference(_lastLogoTap!) > const Duration(seconds: 2)) {
+      _logoTapCount = 1;
+    } else {
+      _logoTapCount++;
+    }
+    _lastLogoTap = now;
+
+    const total = 5;
+    if (_logoTapCount >= total) {
+      _logoTapCount = 0;
+      Navigator.pushNamed(context, '/debug');
+    } else {
+      final remaining = total - _logoTapCount;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('再点 $remaining 次进入调试模式',
+              style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
+          backgroundColor: AppColors.bgCard,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(milliseconds: 800),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          elevation: 4,
+        ),
+      );
     }
   }
 
@@ -154,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Row(
         children: [
           GestureDetector(
+            onTap: _onLogoTap,
             child: Container(
               width: 36,
               height: 36,
@@ -180,6 +216,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           const Spacer(),
+          _headerBtn(Icons.smart_toy_outlined, () => Navigator.pushNamed(context, '/chat')),
+          const SizedBox(width: 8),
           _headerBtn(Icons.notifications_outlined, () {}),
           const SizedBox(width: 8),
           _headerBtn(Icons.settings_outlined, () => Navigator.pushNamed(context, '/settings')),
@@ -327,12 +365,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const SizedBox(width: 10),
           _miniStatCard('${_p.streakDays}', '🔥连续天数', AppColors.orange, AppColors.orangeLight),
           const SizedBox(width: 10),
-          _miniStatCard(
-            '${_scheduleItems.where((s) => s.status == 'pending').length}',
-            '待完成',
-            AppColors.textHint,
-            AppColors.bgSection,
-          ),
+          _miniStatCardMl(_p.todayMl),
         ],
       ),
     );
@@ -371,8 +404,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _miniStatCardMl(int ml) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$ml',
+                  style: GoogleFonts.spaceMono(
+                      fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.blue),
+                ),
+                const SizedBox(width: 2),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text('ml',
+                      style: GoogleFonts.spaceMono(
+                          fontSize: 10, fontWeight: FontWeight.w400, color: AppColors.textHint)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text('已喝水量',
+                style: TextStyle(fontSize: 10, color: AppColors.textHint),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildScheduleCard() {
-    final items = _scheduleItems;
+    final logs = _p.logs;
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,135 +459,156 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text('今日时间表',
+              const Text('今日饮水记录',
                   style: TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.blueLight,
-                  borderRadius: BorderRadius.circular(6),
+              if (logs.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.blueLight,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text('共 ${_p.todayMl}ml',
+                      style: const TextStyle(fontSize: 10, color: AppColors.blue, fontWeight: FontWeight.w600)),
                 ),
-                child: const Text('智能规划',
-                    style: TextStyle(fontSize: 10, color: AppColors.blue, fontWeight: FontWeight.w600)),
-              ),
             ],
           ),
           const SizedBox(height: 14),
-          ...List.generate(items.length, (index) {
-            final intervalStart = (index * 0.08).clamp(0.0, 0.7);
-            final intervalEnd = (intervalStart + 0.3).clamp(0.0, 1.0);
-            final slideAnim = Tween<Offset>(
-              begin: const Offset(0.3, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: _entranceController,
-              curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOutCubic),
-            ));
-            final fadeAnim = CurvedAnimation(
-              parent: _entranceController,
-              curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOut),
-            );
-            return FadeTransition(
-              opacity: fadeAnim,
-              child: SlideTransition(
-                position: slideAnim,
-                child: _buildScheduleRow(items[index]),
-              ),
-            );
-          }),
+          if (logs.isEmpty)
+            _buildEmptyLogsHint()
+          else
+            ...List.generate(logs.length, (index) {
+              final log = logs[index];
+              final intervalStart = (index * 0.08).clamp(0.0, 0.7);
+              final intervalEnd = (intervalStart + 0.3).clamp(0.0, 1.0);
+              final slideAnim = Tween<Offset>(
+                begin: const Offset(0.3, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: _entranceController,
+                curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOutCubic),
+              ));
+              final fadeAnim = CurvedAnimation(
+                parent: _entranceController,
+                curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOut),
+              );
+              return FadeTransition(
+                opacity: fadeAnim,
+                child: SlideTransition(
+                  position: slideAnim,
+                  child: _buildDrinkLogRow(log, index == logs.length - 1),
+                ),
+              );
+            }),
         ],
       ),
     );
   }
 
-  Widget _buildScheduleRow(_ScheduleItem item) {
-    Color bgColor;
-    Color? borderColor;
-    Widget statusWidget;
-
-    switch (item.status) {
-      case 'done':
-        bgColor = AppColors.bgSection;
-        borderColor = null;
-        statusWidget = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.greenLight,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text('✓',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.green)),
-        );
-      case 'current':
-        bgColor = AppColors.blueLight;
-        borderColor = AppColors.blue.withValues(alpha: 0.3);
-        statusWidget = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.blue,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text('现在',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
-        );
-      case 'missed':
-        bgColor = Colors.transparent;
-        borderColor = null;
-        statusWidget = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.orangeLight,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text('未打卡',
-              style: TextStyle(fontSize: 10, color: AppColors.orange, fontWeight: FontWeight.w600)),
-        );
-      default:
-        bgColor = Colors.transparent;
-        borderColor = null;
-        statusWidget = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.bgSection,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text('待',
-              style: TextStyle(fontSize: 10, color: AppColors.textHint)),
-        );
-    }
-
-    return Opacity(
-      opacity: item.status == 'pending' ? 0.5 : (item.status == 'missed' ? 0.7 : 1.0),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-          border: borderColor != null ? Border.all(color: borderColor) : null,
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 38,
-              child: Text(item.time,
-                  style: GoogleFonts.spaceMono(fontSize: 11, color: AppColors.textHint)),
+  Widget _buildEmptyLogsHint() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.blueLight,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 8),
-            Text(item.icon, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(item.desc,
-                  style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            child: const Center(
+              child: Text('💧', style: TextStyle(fontSize: 26)),
             ),
-            Text('${item.ml}ml',
-                style: AppTheme.monoStyle.copyWith(fontSize: 12, color: AppColors.blue)),
-            const SizedBox(width: 8),
-            statusWidget,
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '今天还没有喝水记录',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '点击上方「喝水打卡」开始记录',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: _showQuickDrinkSheet,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.blue,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('💧 ', style: TextStyle(fontSize: 13)),
+                  Text('立即打卡',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrinkLogRow(DrinkLog log, bool isLatest) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isLatest ? AppColors.blueLight : AppColors.bgSection,
+        borderRadius: BorderRadius.circular(10),
+        border: isLatest ? Border.all(color: AppColors.blue.withValues(alpha: 0.25)) : null,
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 38,
+            child: Text(log.time,
+                style: GoogleFonts.spaceMono(fontSize: 11, color: AppColors.textHint)),
+          ),
+          const SizedBox(width: 8),
+          Text(log.icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(log.description,
+                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          ),
+          Text('+${log.ml}ml',
+              style: AppTheme.monoStyle.copyWith(
+                fontSize: 12,
+                color: isLatest ? AppColors.blue : AppColors.textSecondary,
+                fontWeight: isLatest ? FontWeight.w700 : FontWeight.w400,
+              )),
+          const SizedBox(width: 8),
+          if (isLatest)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.blue,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('最新',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.greenLight,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('✓',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.green)),
+            ),
+        ],
       ),
     );
   }
@@ -636,95 +729,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  List<_ScheduleItem> get _scheduleItems {
-    final hour = DateTime.now().hour;
-    final minute = DateTime.now().minute;
-    final nowMinutes = hour * 60 + minute;
-
-    // 根据用户设置动态生成时间表
-    final wakeParts = _p.profile.wakeTime.split(':');
-    final bedParts = _p.profile.bedTime.split(':');
-    final wakeHour = int.parse(wakeParts[0]);
-    final wakeMinute = int.parse(wakeParts[1]);
-    final bedHour = int.parse(bedParts[0]);
-    final bedMinute = int.parse(bedParts[1]);
-    final intervalMin = _p.profile.reminderIntervalMin;
-
-    final wakeTotal = wakeHour * 60 + wakeMinute;
-    final bedTotal = bedHour * 60 + bedMinute;
-    final totalMl = _p.profile.dailyGoalMl;
-
-    // 计算时间点
-    final items = <_ScheduleItem>[];
-    var currentMin = wakeTotal;
-    var slotIndex = 0;
-
-    // 饮水描述和图标轮替
-    const descs = [
-      ('💧', '晨起空腹温水'),
-      ('☕', '工作提神饮品'),
-      ('💧', '工作间隙补水'),
-      ('🥛', '午餐补水'),
-      ('💧', '下午补水'),
-      ('💧', '休息补水'),
-      ('💧', '傍晚补水'),
-      ('💧', '晚间补水'),
-      ('💧', '睡前温水'),
-    ];
-
-    while (currentMin < bedTotal) {
-      final h = currentMin ~/ 60;
-      final m = currentMin % 60;
-      final timeStr = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
-      final descIndex = slotIndex % descs.length;
-      final (icon, desc) = descs[descIndex];
-
-      // 计算每个时段推荐饮水量
-      final totalSlots = ((bedTotal - wakeTotal) / intervalMin).ceil();
-      final mlPerSlot = totalSlots > 0 ? (totalMl / totalSlots).round() : 250;
-
-      // 判断状态：检查该时段前后是否有实际饮水记录
-      String status;
-      final slotStart = currentMin;
-      final slotEnd = currentMin + intervalMin;
-
-      if (nowMinutes < slotStart) {
-        status = 'pending';
-      } else if (nowMinutes >= slotStart && nowMinutes < slotEnd) {
-        // 当前时段，检查是否已有打卡
-        final hasLog = _p.logs.any((log) {
-          final logParts = log.time.split(':');
-          final logMin = int.parse(logParts[0]) * 60 + int.parse(logParts[1]);
-          return logMin >= slotStart && logMin < slotEnd;
-        });
-        status = hasLog ? 'done' : 'current';
-      } else {
-        // 已过去的时段，检查是否有打卡
-        final hasLog = _p.logs.any((log) {
-          final logParts = log.time.split(':');
-          final logMin = int.parse(logParts[0]) * 60 + int.parse(logParts[1]);
-          return logMin >= slotStart && logMin < slotEnd;
-        });
-        status = hasLog ? 'done' : 'missed';
-      }
-
-      items.add(_ScheduleItem(timeStr, icon, desc, mlPerSlot, status));
-      currentMin += intervalMin;
-      slotIndex++;
-    }
-
-    return items;
-  }
-}
-
-class _ScheduleItem {
-  final String time;
-  final String icon;
-  final String desc;
-  final int ml;
-  final String status;
-
-  _ScheduleItem(this.time, this.icon, this.desc, this.ml, this.status);
 }
 
 class _QuickDrinkSheet extends StatelessWidget {
