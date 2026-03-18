@@ -16,7 +16,14 @@
       "Bash(flutter build:*)",
       "Bash(flutter doctor:*)",
       "Bash(pod install:*)",
-      "Bash(flutter format:*)"
+      "Bash(flutter format:*)",
+      "Bash(npm install:*)",
+      "Bash(npm search:*)",
+      "Bash(skills find:*)",
+      "Bash(skills --help:*)",
+      "Bash(skills search:*)",
+      "Bash(skills list:*)",
+      "Bash(skills add:*)"
     ]
   }
 }

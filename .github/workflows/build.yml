@@ -1,0 +1,58 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ke_le_me
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - run: flutter analyze
+
+      - run: flutter test
+
+      - run: flutter build apk --split-per-abi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-release
+          path: ke_le_me/build/app/outputs/flutter-apk/*.apk
+
+  build-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ke_le_me
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - run: flutter build web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: ke_le_me/build/web
