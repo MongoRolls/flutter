@@ -1,4 +1,10 @@
 class AiConfig {
+  static const _defaultApiKey =
+      String.fromEnvironment('DEEPSEEK_API_KEY', defaultValue: _builtinKey);
+
+  static const _builtinKey =
+      'sk-nnbD8jXM5rn3VDMHJ7JC3Hdxd4Y0EOO9upf0oMD83k4X7WJM';
+
   final String baseUrl;
   final String apiKey;
   final String model;
@@ -13,8 +19,7 @@ class AiConfig {
     this.maxTokens = 2048,
   });
 
-  /// 从编译时环境变量创建（MVP 方案）
   factory AiConfig.fromEnvironment() => const AiConfig(
-        apiKey: String.fromEnvironment('DEEPSEEK_API_KEY'),
+        apiKey: _defaultApiKey,
       );
 }

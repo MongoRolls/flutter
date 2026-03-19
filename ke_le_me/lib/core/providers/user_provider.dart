@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/drink_log.dart';
 import '../models/user_profile.dart';
+import '../models/weather_data.dart';
+import '../utils/goal_predictor.dart';
 
 class UserProvider extends ChangeNotifier {
   UserProfile _profile = UserProfile();
@@ -15,6 +17,9 @@ class UserProvider extends ChangeNotifier {
   // 本月打卡记录：day -> totalMl
   final Map<int, int> _monthlyHits = {};
   int _streakDays = 0;
+  WeatherData? _weatherData;
+  GoalPrediction? _goalPrediction;
+  int? _dynamicGoalMl;
 
   UserProfile get profile => _profile;
   int get todayMl => _todayMl;
@@ -25,6 +30,9 @@ class UserProvider extends ChangeNotifier {
   int get remainingMl => (_profile.dailyGoalMl - _todayMl).clamp(0, _profile.dailyGoalMl);
   Map<int, int> get monthlyHits => Map.unmodifiable(_monthlyHits);
   int get streakDays => _streakDays;
+  WeatherData? get weatherData => _weatherData;
+  GoalPrediction? get goalPrediction => _goalPrediction;
+  int? get dynamicGoalMl => _dynamicGoalMl;
 
   String get _currentDate {
     final now = DateTime.now();

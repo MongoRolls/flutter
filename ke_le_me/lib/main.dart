@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
+import 'core/models/memory_fact.dart';
+import 'core/models/session_summary.dart';
+import 'core/models/custom_reminder.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/user_provider.dart';
 import 'core/services/notification_service.dart';
@@ -10,8 +14,15 @@ import 'features/settings/screens/settings_screen.dart';
 import 'features/debug/screens/debug_screen.dart';
 import 'features/chat/screens/chat_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  Hive.registerAdapter(MemoryFactAdapter());
+  Hive.registerAdapter(SessionSummaryAdapter());
+  Hive.registerAdapter(CustomReminderAdapter());
+  await Hive.openBox<MemoryFact>('memory_facts');
+  await Hive.openBox<SessionSummary>('session_summaries');
+  await Hive.openBox<CustomReminder>('custom_reminders');
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

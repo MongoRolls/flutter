@@ -10,6 +10,8 @@ class UserProfile {
   String reminderStyle;
   bool notificationsEnabled;
   bool onboardingCompleted;
+  double? cachedLat;
+  double? cachedLon;
 
   UserProfile({
     this.nickname = '',
@@ -23,6 +25,8 @@ class UserProfile {
     this.reminderStyle = '温柔',
     this.notificationsEnabled = true,
     this.onboardingCompleted = false,
+    this.cachedLat,
+    this.cachedLon,
   });
 
   int get recommendedGoal => (weight * 35).round().clamp(1500, 4000);
@@ -39,6 +43,8 @@ class UserProfile {
         'reminderStyle': reminderStyle,
         'notificationsEnabled': notificationsEnabled,
         'onboardingCompleted': onboardingCompleted,
+        'cachedLat': cachedLat,
+        'cachedLon': cachedLon,
       };
 
   factory UserProfile.fromMap(Map<String, dynamic> m) => UserProfile(
@@ -53,5 +59,7 @@ class UserProfile {
         reminderStyle: m['reminderStyle'] ?? '温柔',
         notificationsEnabled: m['notificationsEnabled'] ?? true,
         onboardingCompleted: m['onboardingCompleted'] ?? false,
+        cachedLat: (m['cachedLat'] as num?)?.toDouble(),
+        cachedLon: (m['cachedLon'] as num?)?.toDouble(),
       );
 }

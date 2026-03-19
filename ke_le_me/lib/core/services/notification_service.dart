@@ -215,6 +215,49 @@ class NotificationService {
     );
   }
 
+  Future<void> scheduleCustomReminder({
+    required int id,
+    required String title,
+    required DateTime scheduledDate,
+    String repeat = 'none',
+  }) async {
+    final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
+    DateTimeComponents? matchDateTimeComponents;
+    if (repeat == 'daily') {
+      matchDateTimeComponents = DateTimeComponents.time;
+    } else if (repeat == 'weekly') {
+      matchDateTimeComponents = DateTimeComponents.dayOfWeekAndTime;
+    }
+
+    await _plugin.zonedSchedule(
+      id: id,
+      title: '渴了么',
+      body: title,
+      scheduledDate: tzDate,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+        macOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: matchDateTimeComponents,
+    );
+  }
+
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }

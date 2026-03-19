@@ -28,7 +28,9 @@ jobs:
 
       - run: flutter test
 
-      - run: flutter build apk --split-per-abi
+      - run: >
+          flutter build apk --split-per-abi
+          --dart-define=DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
 
       - uses: actions/upload-artifact@v4
         with:
