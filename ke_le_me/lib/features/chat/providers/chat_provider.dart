@@ -3,11 +3,16 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/providers/user_provider.dart';
-import '../../../core/models/user_profile.dart';
 import '../models/chat_message.dart';
 import '../services/ai_service.dart';
 import '../services/function_registry.dart';
 import '../services/chat_storage_service.dart';
+import 'tool_handlers/drink_tools.dart';
+import 'tool_handlers/profile_tools.dart';
+import 'tool_handlers/weather_tools.dart';
+import 'tool_handlers/memory_tools.dart';
+import 'tool_handlers/reminder_tools.dart';
+import 'system_prompt_builder.dart';
 
 class ChatProvider extends ChangeNotifier {
   final AiService _aiService;
@@ -23,6 +28,9 @@ class ChatProvider extends ChangeNotifier {
   bool get isGenerating => _isGenerating;
   String? get error => _error;
 
+  /// UI 层注册的工具执行回调，用于轻提示
+  void Function(String toolName, Map<String, dynamic> result)? onToolExecuted;
+
   ChatProvider({
     required AiService aiService,
     required UserProvider userProvider,
@@ -34,129 +42,21 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _registerFunctions() {
-    _registry.register(FunctionDefinition(
-      name: 'add_drink',
-      description: '帮用户记录喝水量',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'ml': {
-            'type': 'integer',
-            'description': '喝水量，单位毫升',
-          },
-          'type': {
-            'type': 'string',
-            'description': '饮品类型图标，如 💧 水、☕ 咖啡、🍵 茶等',
-          },
-          'desc': {
-            'type': 'string',
-            'description': '饮品描述，如 温水、咖啡、绿茶等',
-          },
-        },
-        'required': ['ml'],
-      },
-      handler: (args) async {
-        final ml = (args['ml'] as num?)?.toInt() ?? 0;
-        final type = args['type'] as String? ?? '💧';
-        final desc = args['desc'] as String? ?? '喝水';
-        await _userProvider.addDrink(ml, type: type, desc: desc);
-        final pct = (_userProvider.progress * 100).round();
-        return jsonEncode({
-          'success': true,
-          'recorded_ml': ml,
-          'today_total_ml': _userProvider.todayMl,
-          'daily_goal_ml': _userProvider.profile.dailyGoalMl,
-          'progress_percent': pct,
-          'message': '成功记录 $desc ${ml}ml，今日共 ${_userProvider.todayMl}ml（$pct%）',
-        });
-      },
-    ));
-
-    _registry.register(FunctionDefinition(
-      name: 'get_today_progress',
-      description: '查询今日饮水进度',
-      parameters: {
-        'type': 'object',
-        'properties': {},
-      },
-      handler: (args) async {
-        final pct = (_userProvider.progress * 100).round();
-        final logs = _userProvider.logs;
-        return jsonEncode({
-          'today_ml': _userProvider.todayMl,
-          'daily_goal_ml': _userProvider.profile.dailyGoalMl,
-          'remaining_ml': _userProvider.remainingMl,
-          'progress_percent': pct,
-          'log_count': logs.length,
-          'recent_log': logs.isNotEmpty
-              ? '${logs.last.time} ${logs.last.description} ${logs.last.ml}ml'
-              : '暂无记录',
-          'streak_days': _userProvider.streakDays,
-        });
-      },
-    ));
-
-    _registry.register(FunctionDefinition(
-      name: 'get_user_profile',
-      description: '查询用户基本信息和健康数据',
-      parameters: {
-        'type': 'object',
-        'properties': {},
-      },
-      handler: (args) async {
-        final p = _userProvider.profile;
-        return jsonEncode({
-          'nickname': p.nickname.isEmpty ? '用户' : p.nickname,
-          'gender': p.gender,
-          'weight_kg': p.weight,
-          'activity_level': p.activityLevel,
-          'daily_goal_ml': p.dailyGoalMl,
-          'recommended_goal_ml': p.recommendedGoal,
-          'wake_time': p.wakeTime,
-          'bed_time': p.bedTime,
-          'reminder_interval_min': p.reminderIntervalMin,
-          'streak_days': _userProvider.streakDays,
-        });
-      },
-    ));
-
-    _registry.register(FunctionDefinition(
-      name: 'update_daily_goal',
-      description: '调整用户每日饮水目标',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'goal_ml': {
-            'type': 'integer',
-            'description': '新的每日饮水目标，单位毫升',
-          },
-        },
-        'required': ['goal_ml'],
-      },
-      handler: (args) async {
-        final goalMl = (args['goal_ml'] as num?)?.toInt() ?? 2000;
-        final clamped = goalMl.clamp(500, 5000);
-        final newProfile = UserProfile(
-          nickname: _userProvider.profile.nickname,
-          gender: _userProvider.profile.gender,
-          activityLevel: _userProvider.profile.activityLevel,
-          weight: _userProvider.profile.weight,
-          dailyGoalMl: clamped,
-          wakeTime: _userProvider.profile.wakeTime,
-          bedTime: _userProvider.profile.bedTime,
-          reminderIntervalMin: _userProvider.profile.reminderIntervalMin,
-          reminderStyle: _userProvider.profile.reminderStyle,
-          notificationsEnabled: _userProvider.profile.notificationsEnabled,
-          onboardingCompleted: _userProvider.profile.onboardingCompleted,
-        );
-        _userProvider.updateProfile(newProfile);
-        return jsonEncode({
-          'success': true,
-          'new_goal_ml': clamped,
-          'message': '每日饮水目标已更新为 ${clamped}ml',
-        });
-      },
-    ));
+    for (final fn in createDrinkTools(_userProvider)) {
+      _registry.register(fn);
+    }
+    for (final fn in createProfileTools(_userProvider)) {
+      _registry.register(fn);
+    }
+    for (final fn in createWeatherTools(_userProvider)) {
+      _registry.register(fn);
+    }
+    for (final fn in createMemoryTools()) {
+      _registry.register(fn);
+    }
+    for (final fn in createReminderTools()) {
+      _registry.register(fn);
+    }
   }
 
   /// 加载历史消息；若无历史则插入欢迎语
@@ -240,6 +140,14 @@ class ChatProvider extends ChangeNotifier {
           // 执行每个工具并追加 tool 消息
           for (final tc in toolCallsAccumulated) {
             final result = await _registry.execute(tc.name, tc.arguments);
+
+            // 通知 UI 层（用于轻提示）
+            if (onToolExecuted != null) {
+              try {
+                onToolExecuted!(tc.name, jsonDecode(result) as Map<String, dynamic>);
+              } catch (_) {}
+            }
+
             final toolMsg = ChatMessage(
               id: _uuid(),
               role: MessageRole.tool,
@@ -285,45 +193,11 @@ class ChatProvider extends ChangeNotifier {
   }
 
   String _buildSystemPrompt() {
-    final p = _userProvider.profile;
-    final todayMl = _userProvider.todayMl;
-    final remaining = _userProvider.remainingMl;
-    final pct = (_userProvider.progress * 100).round();
-    final logs = _userProvider.logs;
-    final streak = _userProvider.streakDays;
-    final now = DateTime.now();
-    final hour = now.hour;
-
-    return '''
-你是「渴了么」App 的 AI 健康饮水助手，名字叫「小渴」。
-
-## 角色设定
-- 专业但亲切，用简短的中文回答
-- 关注用户的饮水健康，适时鼓励
-- 可以回答饮水、健康饮品相关问题
-- 当用户需要记录喝水或调整目标时，主动调用工具
-
-## 用户信息
-- 昵称：${p.nickname.isEmpty ? '用户' : p.nickname}
-- 性别：${p.gender}
-- 体重：${p.weight}kg
-- 运动量：${p.activityLevel}
-- 每日目标：${p.dailyGoalMl}ml
-- 作息：${p.wakeTime} ~ ${p.bedTime}
-
-## 今日状态（${now.month}月${now.day}日 $hour时）
-- 已喝：${todayMl}ml（$pct%）
-- 剩余：${remaining}ml
-- 打卡次数：${logs.length}
-- 连续达标：$streak天
-${logs.isNotEmpty ? '- 最近记录：${logs.last.time} ${logs.last.description} ${logs.last.ml}ml' : '- 今天还没有喝水记录'}
-
-## 回复规则
-- 回复控制在 100 字以内，除非用户要求详细解释
-- 用 emoji 增加亲和力，但不要过度
-- 如果用户说喝了水但没指定量，默认 250ml
-- 记录喝水后给出简短鼓励
-''';
+    return SystemPromptBuilder.build(
+      userProvider: _userProvider,
+      weather: _userProvider.weatherData,
+      prediction: _userProvider.goalPrediction,
+    );
   }
 
   List<Map<String, dynamic>> _buildApiMessages(String systemPrompt) {
@@ -361,6 +235,56 @@ ${logs.isNotEmpty ? '- 最近记录：${logs.last.time} ${logs.last.description}
   }
 
   String _uuid() => DateTime.now().microsecondsSinceEpoch.toString();
+
+  /// 是否满足生成摘要的条件（用户至少发送了 3 条消息）
+  bool get shouldGenerateSummary {
+    return _messages.where((m) => m.role == MessageRole.user).length >= 3;
+  }
+
+  /// 生成会话摘要并保存（供 PopScope 调用）
+  /// 使用 fire-and-forget 模式，失败时静默跳过
+  Future<void> generateSummary() async {
+    try {
+      final recentMessages = _messages
+          .where((m) =>
+              (m.role == MessageRole.user || m.role == MessageRole.assistant) &&
+              m.content.isNotEmpty)
+          .toList();
+
+      if (recentMessages.length < 3) return;
+
+      final toSummarize = recentMessages.length > 10
+          ? recentMessages.sublist(recentMessages.length - 10)
+          : recentMessages;
+
+      final convText = toSummarize
+          .map((m) =>
+              '${m.role == MessageRole.user ? "用户" : "助手"}：${m.content}')
+          .join('\n');
+
+      final summaryPrompt =
+          '请用一两句话（50字以内）总结以下对话的要点，重点关注用户的健康信息和需求：\n\n$convText';
+
+      String? summary;
+      final buffer = StringBuffer();
+      await for (final event in _aiService.sendMessageStream(
+        messages: [
+          {'role': 'system', 'content': '你是一个简洁的对话摘要助手。'},
+          {'role': 'user', 'content': summaryPrompt},
+        ],
+        tools: [],
+      )) {
+        if (event is AiTextDelta) buffer.write(event.text);
+        if (event is AiDone) summary = buffer.toString().trim();
+      }
+
+      if (summary != null && summary.isNotEmpty) {
+        await _storage.addSummary(summary);
+      }
+    } catch (e) {
+      debugPrint('Summary generation failed (non-blocking): $e');
+    }
+  }
 
   @override
   void dispose() {

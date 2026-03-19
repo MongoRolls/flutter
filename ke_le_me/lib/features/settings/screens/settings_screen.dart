@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../common/widgets/glass_card.dart';
+import 'health_archive_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final UserProvider userProvider;
@@ -97,6 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildBasicSettings(),
                   _buildReminderSwitches(),
                   _buildReminderTime(),
+                  _buildHealthArchive(),
                   _buildTestButton(),
                   _buildVersionInfo(),
                   const SizedBox(height: 20),
@@ -413,6 +415,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildHealthArchive() {
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('🧠', 'AI 健康档案'),
+          const SizedBox(height: 4),
+          const Text('AI 助手从对话中记住的信息',
+              style: TextStyle(fontSize: 12, color: AppColors.textHint)),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HealthArchiveScreen()),
+                );
+              },
+              icon: const Icon(Icons.folder_outlined, size: 18),
+              label: const Text('查看健康档案'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.blue,
+                side: const BorderSide(color: AppColors.blue, width: 1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTestButton() {
     return GlassCard(
       child: Column(
@@ -465,7 +500,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           children: [
             Text(
-              '渴了么 v1.0.0',
+              '渴了么 v2.0.0',
               style: const TextStyle(fontSize: 11, color: AppColors.textHint),
             ),
             const SizedBox(height: 4),

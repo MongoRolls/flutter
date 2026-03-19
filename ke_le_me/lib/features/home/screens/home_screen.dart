@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../../common/widgets/progress_ring.dart';
+import '../widgets/weather_goal_card.dart';
 
 class HomeScreen extends StatefulWidget {
   final UserProvider userProvider;
@@ -166,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 padding: const EdgeInsets.all(16),
                 children: [
                   _buildHeroCard(greeting, name, now),
+                  WeatherGoalCard(userProvider: _p),
                   _buildMiniStats(),
                   _buildScheduleCard(),
                   _buildStreakCalendar(now),

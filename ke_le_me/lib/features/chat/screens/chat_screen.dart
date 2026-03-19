@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -35,6 +37,30 @@ class _ChatScreenState extends State<ChatScreen> {
       userProvider: widget.userProvider,
     );
     _chatProvider.addListener(_onChatChanged);
+    _chatProvider.onToolExecuted = (toolName, result) {
+      if (!mounted) return;
+      if (toolName == 'save_health_note' && result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('📝 已记住：${result['saved_content'] ?? ''}'),
+            backgroundColor: AppColors.bgCard,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      } else if (toolName == 'set_reminder' && result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⏰ 已设置提醒：${result['title'] ?? ''}'),
+            backgroundColor: AppColors.bgCard,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    };
     _initChat();
   }
 
@@ -106,10 +132,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgMain,
-      appBar: _buildAppBar(),
-      body: _initialized ? _buildBody() : _buildLoading(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_chatProvider.shouldGenerateSummary) {
+          unawaited(_chatProvider.generateSummary());
+        }
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bgMain,
+        appBar: _buildAppBar(),
+        body: _initialized ? _buildBody() : _buildLoading(),
+      ),
     );
   }
 
@@ -121,7 +157,12 @@ class _ChatScreenState extends State<ChatScreen> {
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
         color: AppColors.textPrimary,
-        onPressed: () => Navigator.pop(context),
+        onPressed: () {
+          if (_chatProvider.shouldGenerateSummary) {
+            unawaited(_chatProvider.generateSummary());
+          }
+          Navigator.pop(context);
+        },
       ),
       title: Row(
         mainAxisSize: MainAxisSize.min,

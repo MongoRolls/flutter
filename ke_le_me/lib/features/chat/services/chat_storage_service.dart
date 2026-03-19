@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/models/session_summary.dart';
 import '../models/chat_message.dart';
 
 class ChatStorageService {
@@ -41,6 +44,7 @@ class ChatStorageService {
 
   /// 保存会话摘要
   Future<void> addSummary(String summary) async {
+    // 保留现有 SharedPreferences 逻辑（兼容性）
     final prefs = await SharedPreferences.getInstance();
     final summaries = await getSummaries();
     summaries.add(summary);
@@ -48,6 +52,29 @@ class ChatStorageService {
       summaries.removeRange(0, summaries.length - _maxSummaries);
     }
     await prefs.setString(_summariesKey, jsonEncode(summaries));
+
+    // V2: 同时写入 Hive SessionSummary box
+    try {
+      final box = Hive.box<SessionSummary>('session_summaries');
+      final sessionSummary = SessionSummary(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        summary: summary,
+        date: DateTime.now(),
+        topics: [],
+      );
+      await box.put(sessionSummary.id, sessionSummary);
+
+      // Hive 上限 30 条，超出则删除最旧的
+      if (box.length > 30) {
+        final sorted = box.values.toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+        for (var i = 0; i < box.length - 30; i++) {
+          await sorted[i].delete();
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to save summary to Hive: $e');
+    }
   }
 
   /// 获取历史摘要

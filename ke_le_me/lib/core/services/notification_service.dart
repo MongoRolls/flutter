@@ -215,30 +215,27 @@ class NotificationService {
     );
   }
 
+  /// 调度自定义提醒（V2 新增）
   Future<void> scheduleCustomReminder({
     required int id,
     required String title,
     required DateTime scheduledDate,
     String repeat = 'none',
   }) async {
-    final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
-    DateTimeComponents? matchDateTimeComponents;
-    if (repeat == 'daily') {
-      matchDateTimeComponents = DateTimeComponents.time;
-    } else if (repeat == 'weekly') {
-      matchDateTimeComponents = DateTimeComponents.dayOfWeekAndTime;
+    final tz.TZDateTime scheduledTZ = tz.TZDateTime.from(scheduledDate, tz.local);
+    if (scheduledTZ.isBefore(tz.TZDateTime.now(tz.local))) {
+      if (repeat == 'none') return;
     }
-
     await _plugin.zonedSchedule(
       id: id,
-      title: '渴了么',
+      title: '渴了么 · 自定义提醒',
       body: title,
-      scheduledDate: tzDate,
+      scheduledDate: scheduledTZ,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          channelDescription: _channelDesc,
+          'keleme_custom_reminder',
+          '自定义提醒',
+          channelDescription: '用户或 AI 设置的自定义提醒',
           importance: Importance.high,
           priority: Priority.high,
         ),
@@ -254,8 +251,17 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: matchDateTimeComponents,
+      matchDateTimeComponents: repeat == 'daily'
+          ? DateTimeComponents.time
+          : repeat == 'weekly'
+              ? DateTimeComponents.dayOfWeekAndTime
+              : null,
     );
+  }
+
+  /// 取消单个自定义提醒
+  Future<void> cancelReminder(int id) async {
+    await _plugin.cancel(id: id);
   }
 
   Future<void> cancelAll() async {

@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/drink_log.dart';
 import '../models/user_profile.dart';
 import '../models/weather_data.dart';
+import '../services/location_service.dart';
+import '../services/weather_service.dart';
 import '../utils/goal_predictor.dart';
 
 class UserProvider extends ChangeNotifier {
@@ -73,6 +75,9 @@ class UserProvider extends ChangeNotifier {
     // 加载月度打卡和连续天数
     _loadMonthlyHits(prefs);
     _computeStreak(prefs);
+
+    // 异步加载天气和动态目标（不阻塞主流程）
+    _loadWeatherAndGoal();
 
     notifyListeners();
   }
@@ -203,5 +208,50 @@ class UserProvider extends ChangeNotifier {
     if (_todayMl >= _profile.dailyGoalMl && _streakDays == 0) {
       _streakDays = 1;
     }
+  }
+
+  Future<void> _loadWeatherAndGoal() async {
+    try {
+      final location = await LocationService.instance.getCurrentLocation();
+
+      // 缓存位置坐标
+      if (!location.isDefault) {
+        _profile.cachedLat = location.lat;
+        _profile.cachedLon = location.lon;
+        saveProfile();
+      }
+
+      _weatherData = await WeatherService.instance.getWeather(
+        location.lat,
+        location.lon,
+      );
+
+      _goalPrediction = GoalPredictor.predict(
+        weightKg: _profile.weight,
+        activityLevel: _profile.activityLevel,
+        weather: _weatherData,
+      );
+      _dynamicGoalMl = _goalPrediction!.predictedMl;
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to load weather/goal: $e');
+      _dynamicGoalMl = _profile.dailyGoalMl;
+      notifyListeners();
+    }
+  }
+
+  /// 用户一键采纳 AI 建议目标
+  void adoptDynamicGoal() {
+    if (_dynamicGoalMl != null && _dynamicGoalMl != _profile.dailyGoalMl) {
+      _profile.dailyGoalMl = _dynamicGoalMl!;
+      saveProfile();
+      notifyListeners();
+    }
+  }
+
+  /// 手动刷新天气和动态目标
+  Future<void> refreshWeather() async {
+    await _loadWeatherAndGoal();
   }
 }
