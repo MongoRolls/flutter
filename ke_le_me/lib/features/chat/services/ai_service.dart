@@ -77,8 +77,8 @@ class AiService {
       // 用于累积 tool_call arguments（可能分多个 chunk 到达）
       final Map<int, _ToolCallAccumulator> toolCallAccumulators = {};
 
-      await for (final chunk in stream) {
-        buffer.write(utf8.decode(chunk));
+      await for (final chunk in utf8.decoder.bind(stream)) {
+        buffer.write(chunk);
         final raw = buffer.toString();
         buffer.clear();
 

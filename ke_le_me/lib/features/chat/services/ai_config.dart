@@ -1,9 +1,12 @@
-class AiConfig {
-  static const _defaultApiKey =
-      String.fromEnvironment('DEEPSEEK_API_KEY', defaultValue: _builtinKey);
+import 'package:shared_preferences/shared_preferences.dart';
 
-  static const _builtinKey =
-      'sk-nnbD8jXM5rn3VDMHJ7JC3Hdxd4Y0EOO9upf0oMD83k4X7WJM';
+class AiConfig {
+  static const _envApiKey =
+      String.fromEnvironment('DEEPSEEK_API_KEY');
+
+  static const _builtinKey = 'sk-b2a0eee592f645ea91103f921bf358e0';
+
+  static const _prefsKey = 'deepseek_api_key';
 
   final String baseUrl;
   final String apiKey;
@@ -19,7 +22,26 @@ class AiConfig {
     this.maxTokens = 2048,
   });
 
-  factory AiConfig.fromEnvironment() => const AiConfig(
-        apiKey: _defaultApiKey,
-      );
+  /// Priority: --dart-define > SharedPreferences > built-in key.
+  static Future<AiConfig> load() async {
+    if (_envApiKey.isNotEmpty) {
+      return const AiConfig(apiKey: _envApiKey);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_prefsKey) ?? '';
+    final key = saved.isNotEmpty ? saved : _builtinKey;
+    return AiConfig(apiKey: key);
+  }
+
+  static Future<void> saveApiKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKey, key.trim());
+  }
+
+  static Future<String> getSavedApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_prefsKey) ?? '';
+  }
+
+  bool get hasApiKey => apiKey.isNotEmpty;
 }

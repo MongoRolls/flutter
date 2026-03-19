@@ -31,7 +31,12 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    final aiService = AiService(config: AiConfig.fromEnvironment());
+    _initServices();
+  }
+
+  Future<void> _initServices() async {
+    final config = await AiConfig.load();
+    final aiService = AiService(config: config);
     _chatProvider = ChatProvider(
       aiService: aiService,
       userProvider: widget.userProvider,

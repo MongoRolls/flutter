@@ -99,87 +99,122 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _doGenerate() async {
-    // 添加占位 assistant 消息（streaming）
-    final assistantId = _uuid();
-    var assistantMsg = ChatMessage(
-      id: assistantId,
-      role: MessageRole.assistant,
-      content: '',
-      timestamp: DateTime.now(),
-      status: MessageStatus.streaming,
-    );
-    _messages = [..._messages, assistantMsg];
-    notifyListeners();
+    const maxRounds = 5;
+    var round = 0;
 
-    final systemPrompt = _buildSystemPrompt();
-    final apiMessages = _buildApiMessages(systemPrompt);
-    final tools = _registry.toolsJson;
+    try {
+      while (round < maxRounds) {
+        round++;
 
-    final toolCallsAccumulated = <ToolCall>[];
-
-    await for (final event
-        in _aiService.sendMessageStream(messages: apiMessages, tools: tools)) {
-      if (event is AiTextDelta) {
-        assistantMsg = assistantMsg.copyWith(
-          content: assistantMsg.content + event.text,
+        // 添加占位 assistant 消息（streaming）
+        final assistantId = _uuid();
+        var assistantMsg = ChatMessage(
+          id: assistantId,
+          role: MessageRole.assistant,
+          content: '',
+          timestamp: DateTime.now(),
           status: MessageStatus.streaming,
         );
-        _updateMessage(assistantMsg);
+        _messages = [..._messages, assistantMsg];
         notifyListeners();
-      } else if (event is AiToolCallDelta) {
-        toolCallsAccumulated.add(event.toolCall);
-      } else if (event is AiDone) {
-        if (toolCallsAccumulated.isNotEmpty) {
-          // 有 tool_calls：标记 assistant 消息并执行工具
-          assistantMsg = assistantMsg.copyWith(
-            status: MessageStatus.done,
-            toolCalls: toolCallsAccumulated,
-          );
-          _updateMessage(assistantMsg);
 
-          // 执行每个工具并追加 tool 消息
-          for (final tc in toolCallsAccumulated) {
-            final result = await _registry.execute(tc.name, tc.arguments);
+        final systemPrompt = _buildSystemPrompt();
+        final apiMessages = _buildApiMessages(systemPrompt);
+        final tools = _registry.toolsJson;
 
-            // 通知 UI 层（用于轻提示）
-            if (onToolExecuted != null) {
-              try {
-                onToolExecuted!(tc.name, jsonDecode(result) as Map<String, dynamic>);
-              } catch (_) {}
-            }
+        final toolCallsAccumulated = <ToolCall>[];
+        var shouldContinue = false;
 
-            final toolMsg = ChatMessage(
-              id: _uuid(),
-              role: MessageRole.tool,
-              content: result,
-              timestamp: DateTime.now(),
-              status: MessageStatus.done,
-              toolCallId: tc.id,
+        await for (final event
+            in _aiService.sendMessageStream(messages: apiMessages, tools: tools)) {
+          if (event is AiTextDelta) {
+            assistantMsg = assistantMsg.copyWith(
+              content: assistantMsg.content + event.text,
+              status: MessageStatus.streaming,
             );
-            _messages = [..._messages, toolMsg];
+            _updateMessage(assistantMsg);
             notifyListeners();
-          }
+          } else if (event is AiToolCallDelta) {
+            toolCallsAccumulated.add(event.toolCall);
+          } else if (event is AiDone) {
+            if (toolCallsAccumulated.isNotEmpty) {
+              // 有 tool_calls：标记 assistant 消息并执行工具
+              assistantMsg = assistantMsg.copyWith(
+                status: MessageStatus.done,
+                toolCalls: toolCallsAccumulated,
+              );
+              _updateMessage(assistantMsg);
 
-          // 二次调用，让模型基于工具结果继续生成
-          await _doGenerate();
-          return;
-        } else {
-          // 无 tool_calls：标记完成
-          assistantMsg = assistantMsg.copyWith(status: MessageStatus.done);
-          _updateMessage(assistantMsg);
-          _isGenerating = false;
-          await _storage.saveMessages(_messages);
-          notifyListeners();
+              // 执行每个工具并追加 tool 消息
+              for (final tc in toolCallsAccumulated) {
+                final result = await _registry.execute(tc.name, tc.arguments);
+
+                // 通知 UI 层（用于轻提示）
+                if (onToolExecuted != null) {
+                  try {
+                    onToolExecuted!(tc.name, jsonDecode(result) as Map<String, dynamic>);
+                  } catch (_) {}
+                }
+
+                final toolMsg = ChatMessage(
+                  id: _uuid(),
+                  role: MessageRole.tool,
+                  content: result,
+                  timestamp: DateTime.now(),
+                  status: MessageStatus.done,
+                  toolCallId: tc.id,
+                );
+                _messages = [..._messages, toolMsg];
+                notifyListeners();
+              }
+
+              // 继续循环，让模型基于工具结果继续生成
+              shouldContinue = true;
+            } else {
+              // 无 tool_calls：标记完成，退出循环
+              assistantMsg = assistantMsg.copyWith(status: MessageStatus.done);
+              _updateMessage(assistantMsg);
+              _isGenerating = false;
+              await _storage.saveMessages(_messages);
+              notifyListeners();
+            }
+          } else if (event is AiError) {
+            assistantMsg = assistantMsg.copyWith(
+              content: assistantMsg.content.isEmpty
+                  ? '抱歉，出了点问题：${event.message}'
+                  : assistantMsg.content,
+              status: MessageStatus.error,
+            );
+            _updateMessage(assistantMsg);
+            _error = event.message;
+            _isGenerating = false;
+            notifyListeners();
+            return;
+          }
         }
-      } else if (event is AiError) {
-        assistantMsg = assistantMsg.copyWith(
-          content: assistantMsg.content.isEmpty
-              ? '抱歉，出了点问题：${event.message}'
-              : assistantMsg.content,
+
+        if (!shouldContinue) break;
+      }
+
+      // 超过最大轮次，强制结束
+      if (_isGenerating) {
+        final errorMsg = ChatMessage(
+          id: _uuid(),
+          role: MessageRole.assistant,
+          content: '抱歉，工具调用轮次过多，已自动停止。',
+          timestamp: DateTime.now(),
           status: MessageStatus.error,
         );
-        _updateMessage(assistantMsg);
-        _error = event.message;
+        _messages = [..._messages, errorMsg];
+        _isGenerating = false;
+        await _storage.saveMessages(_messages);
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    } finally {
+      if (_isGenerating) {
         _isGenerating = false;
         notifyListeners();
       }
@@ -210,7 +245,36 @@ class ChatProvider extends ChangeNotifier {
                 m.content.isEmpty &&
                 (m.toolCalls == null || m.toolCalls!.isEmpty)))
         .toList();
-    final trimmed = recent.length > 20 ? recent.sublist(recent.length - 20) : recent;
+    var trimmed = recent.length > 20 ? recent.sublist(recent.length - 20) : recent;
+
+    // Remove leading orphaned tool/assistant-with-tool-calls messages that
+    // lost their paired counterparts due to the window trim.
+    // An orphaned `tool` message has no preceding `assistant` with tool_calls,
+    // and an `assistant` with tool_calls at the very start has no following
+    // `tool` messages — both cause a 400 from OpenAI-compatible APIs.
+    int startIdx = 0;
+    while (startIdx < trimmed.length) {
+      final msg = trimmed[startIdx];
+      if (msg.role == MessageRole.tool) {
+        // Orphaned tool result — its assistant was trimmed away.
+        startIdx++;
+      } else if (msg.role == MessageRole.assistant &&
+          msg.toolCalls != null &&
+          msg.toolCalls!.isNotEmpty) {
+        // assistant with tool_calls: only safe if the very next message is a
+        // tool result (i.e., its results were not trimmed away).
+        final nextIdx = startIdx + 1;
+        if (nextIdx >= trimmed.length ||
+            trimmed[nextIdx].role != MessageRole.tool) {
+          startIdx++;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    trimmed = trimmed.sublist(startIdx);
 
     return [
       {'role': 'system', 'content': systemPrompt},

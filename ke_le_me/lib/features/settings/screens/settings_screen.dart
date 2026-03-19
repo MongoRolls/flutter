@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../common/widgets/glass_card.dart';
+import '../../chat/services/ai_config.dart';
 import 'health_archive_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -26,6 +27,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _bedTime;
   late int _intervalMin;
 
+  final _apiKeyController = TextEditingController();
+  bool _apiKeyObscured = true;
+
   int _debugTapCount = 0;
   DateTime? _lastDebugTap;
 
@@ -40,6 +44,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _wakeTime = profile.wakeTime;
     _bedTime = profile.bedTime;
     _intervalMin = profile.reminderIntervalMin;
+    _loadApiKey();
+  }
+
+  Future<void> _loadApiKey() async {
+    final key = await AiConfig.getSavedApiKey();
+    if (mounted) _apiKeyController.text = key;
+  }
+
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -95,6 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  _buildApiKeySettings(),
                   _buildBasicSettings(),
                   _buildReminderSwitches(),
                   _buildReminderTime(),
@@ -137,6 +154,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildApiKeySettings() {
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('🤖', 'AI 助手配置'),
+          const SizedBox(height: 4),
+          const Text(
+            '已内置默认 Key，如需使用自己的 DeepSeek Key 可在此覆盖',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _apiKeyController,
+            obscureText: _apiKeyObscured,
+            autocorrect: false,
+            enableSuggestions: false,
+            keyboardType: TextInputType.visiblePassword,
+            style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'sk-xxxxxxxx（留空则使用内置 Key）',
+              hintStyle: const TextStyle(color: AppColors.textHint, fontSize: 13),
+              filled: true,
+              fillColor: AppColors.bgSection,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.blue, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _apiKeyObscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  size: 20,
+                  color: AppColors.textHint,
+                ),
+                onPressed: () => setState(() => _apiKeyObscured = !_apiKeyObscured),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saveApiKey,
+              child: const Text('保存 API Key'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveApiKey() async {
+    final key = _apiKeyController.text.trim();
+    await AiConfig.saveApiKey(key);
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              key.isEmpty ? 'API Key 已清除' : 'API Key 已保存 ✓',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppColors.textPrimary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+    }
   }
 
   Widget _buildBasicSettings() {
