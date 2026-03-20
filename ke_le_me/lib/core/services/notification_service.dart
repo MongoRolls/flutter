@@ -284,4 +284,35 @@ class NotificationService {
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }
+
+  /// 发送心连心关怀通知
+  Future<void> showCareNotification({
+    required String contactName,
+    required String message,
+  }) async {
+    await _plugin.show(
+      id: 8000 + DateTime.now().millisecond,
+      title: '渴了么 · 心连心',
+      body: '已向$contactName发送关怀：$message',
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          'keleme_care',
+          '心连心关怀',
+          channelDescription: '心连心喝水关怀通知',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+        macOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+    );
+  }
 }

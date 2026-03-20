@@ -1,279 +1,324 @@
-# 渴了么 (KE LE ME) - MVP 开发计划
+# 渴了么 · MVP 新功能设计计划
 
-## 项目概述
-
-**应用名称**: 渴了么  
-**英文名**: KE LE ME  
-**定位**: AI 驱动的智能喝水提醒 & 健康管理工具  
-**目标平台**: iOS / Android (Flutter 跨平台)  
-**开发周期**: 1 周 (Vibe Coding)  
-
-### 核心亮点（完整版愿景）
-- 基于大模型，结合天气/日程/身体数据智能预测饮水量
-- 健康小助手对话框（可上传体检报告、血液检测报告等）
-- 社交属性：排行榜、积分兑换礼品（水杯、咖啡兑换券等）
-
-### MVP 版本范围（本周目标）
-**只做 3 个核心页面，跑通最小闭环：**
-1. 新用户设置页（Onboarding）
-2. 主页面（Home）
-3. 提醒/通知设置页（Settings）
+> 原则：**不动现有代码**，只新增功能。服务端部分单独存档（见 server-plan.md）。
 
 ---
 
-## 设计规范
+## 一、背景与目标
 
-### 色彩系统（深色科技风）
-| Token | 色值 | 用途 |
-|-------|------|------|
-| `bgDeep` | `#060E1C` | 主背景 |
-| `bgDark` | `#0A1628` | 次背景/卡片背景 |
-| `bgCard` | `#0D1F38` | 卡片 |
-| `bgCard2` | `#112440` | 内嵌卡片 |
-| `blue` | `#29B6F6` | 主强调色 |
-| `orange` | `#FF8F00` | 警告/次强调 |
-| `green` | `#26C6A0` | 成功/完成 |
-| `purple` | `#9C77E8` | 辅助色 |
-| `textWhite` | `#F0F7FF` | 主文字 |
-| `textLight` | `#90CAF9` | 次文字 |
-| `textMuted` | `#546E7A` | 弱文字 |
+**原始 PRD 第四菜单页（暂定【社区】）**
 
-### 字体
-- 中文: Noto Sans SC (300/400/500/700)
-- 数字/等宽: Space Mono (400/700)
+> 主要为多喝水社区功能，目的通过趣味化、社交化的激励设计，将喝水从被动任务转化为主动打卡行为，大幅提升长期留存。
+>
+> - 挑战赛：搭子计划。连续一个月按时完成饮水计划，获得成就奖品
+> - 心连心模块：提醒家人/好友多喝水（可监督），通知提醒可推送到对方app上
 
-### 圆角
-- 卡片: 16px
-- 小组件: 10px
-- 按钮: 10-12px
+**MVP 范围**：只做 UI，本地 mock 数据，不依赖服务端。
 
 ---
 
-## MVP 页面详细设计
+## 二、新增 Tab 设计
 
-### Page 1: 新用户设置页（Onboarding）
-
-**流程**: 4 步渐进式引导，底部有进度指示器
-
-#### Step 1 - 欢迎 & 基础信息
-- Logo + App 名称 "渴了么"
-- 输入昵称
-- 选择性别（男/女/其他）
-- 选择运动量（久坐/轻度/中度/高强度）
-- 体重滑块（40-120kg，默认 65kg）
-- 底部蓝色「继续」按钮
-
-#### Step 2 - 每日目标设置
-- 系统根据体重自动计算推荐值（体重 × 35ml）
-- 大号圆环显示目标值
-- 滑块手动微调（1500-4000ml）
-- 底部「继续」按钮
-
-#### Step 3 - 提醒计划
-- 设置起床时间（默认 7:00）
-- 设置就寝时间（默认 23:00）
-- 提醒间隔选择（30min / 1h / 1.5h / 2h）
-- 底部「完成」按钮
-
-#### Step 4 - 通知权限
-- 说明文字：为了按时提醒你喝水，需要开启通知
-- 水滴图标动画
-- 「开启通知」按钮（调用系统权限）
-- 「稍后再说」文字按钮
-
-### Page 2: 主页面（Home）
-
-#### 顶部 Header
-- 左: Logo 圆点 "渴" + "渴了么" 标题
-- 右: 通知铃铛按钮 + 设置按钮
-
-#### 核心区域 - 进度卡片
-- 问候语 "👋 早上好，{昵称}"
-- 当前日期
-- 大圆环进度条（已喝/目标）
-- 百分比数字
-- 目标文字 "目标 XXXml · 还差 XXXml"
-- 「💧 立即喝水打卡」按钮
-
-#### 快捷统计 - 3 格卡片
-- 今日打卡次数
-- 连续天数（🔥）
-- 待完成次数
-
-#### 今日时间表
-- AI 生成标签
-- 时间轴列表，每行：时间 | 图标 | 描述 | 毫升 | 状态标签(✓完成/现在/待)
-
-#### 本月打卡日历
-- 网格展示，颜色区分已打卡/未打卡/今天/未来
-
-#### 快速打卡弹窗（Drawer）
-- 点击「立即喝水打卡」弹出底部抽屉
-- 快速选择饮水量(150/200/250/350/500ml)
-- 确认按钮
-
-### Page 3: 设置/通知页面
-
-#### 基本设置卡片
-- 每日饮水目标（滑块: 1500-4000ml）
-- 体重设置（滑块: 40-120kg，联动推荐目标）
-- 提醒风格选择（💝温柔 / 😄活泼 / 📢严肃）
-
-#### 提醒开关卡片
-- 推送通知（开关）— 锁屏显示喝水提醒
-- 运动后增强提醒（开关）— 运动结束立即推送
-- 会议期间暂停（开关）— 日历有会议时暂停
-- 早间规划提醒（开关）— 每天 8:00 提示输入安排
-
-#### 提醒时间卡片
-- 起床时间设定
-- 就寝时间设定
-- 提醒间隔设置
-
-#### 测试提醒按钮
-- 「🔔 测试喝水提醒」按钮
-
----
-
-## 技术架构
-
-### 项目结构
+现有导航（不改动）：
 ```
-lib/
-├── main.dart                  # 入口，路由配置
-├── app.dart                   # MaterialApp 配置
-├── theme/
-│   └── app_theme.dart         # 主题色彩/字体定义
-├── models/
-│   └── user_profile.dart      # 用户设置数据模型
-├── providers/
-│   └── user_provider.dart     # 状态管理
-├── screens/
-│   ├── onboarding/
-│   │   └── onboarding_screen.dart  # 新用户引导（含 4 步）
-│   ├── home/
-│   │   └── home_screen.dart        # 主页面
-│   └── settings/
-│       └── settings_screen.dart    # 设置页面
-├── widgets/
-│   ├── progress_ring.dart     # 圆环进度条
-│   ├── stat_card.dart         # 统计卡片
-│   ├── schedule_item.dart     # 时间表行
-│   ├── streak_calendar.dart   # 打卡日历
-│   ├── drink_drawer.dart      # 快速打卡抽屉
-│   └── toggle_switch.dart     # 开关组件
-└── utils/
-    └── water_calculator.dart  # 饮水量计算工具
+[ 首页 ] [ 安排 ] [ AI助手 ] [ 设置 ]
 ```
 
-### 核心依赖
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  shared_preferences: ^latest   # 本地存储用户设置
-  flutter_local_notifications: ^latest  # 本地通知
-  google_fonts: ^latest         # 字体
-  permission_handler: ^latest   # 权限管理
+**新增一个 Tab**（插入到现有导航中）：
+
+```
+[ 首页 ] [ 安排 ] [ AI助手 ] [ 社区 ] [ 设置 ]
 ```
 
-### 状态管理
-MVP 阶段使用轻量方案：
-- `ChangeNotifier` + `Provider` 管理用户状态
-- `SharedPreferences` 做本地持久化
-
-### 路由
-- `/onboarding` → 新用户引导（首次启动）
-- `/home` → 主页面（默认页）
-- `/settings` → 设置页面
+> 社区 Tab 整合「心连心」和「多喝水」两块内容，单屏滚动展示。
 
 ---
 
-## 开发排期（1 周）
+## 三、Tab：社区
 
-### Day 1 (周三) - 环境搭建 & 项目初始化
-- [ ] 安装 Flutter SDK (macOS)
-- [ ] `flutter create ke_le_me` 创建项目
-- [ ] 配置 `pubspec.yaml` 依赖
-- [ ] 建立项目目录结构
-- [ ] 实现 `app_theme.dart` 主题系统
-- [ ] 实现 `user_profile.dart` 数据模型
+> 整合心连心与多喝水两块内容，单屏滚动。
 
-### Day 2 (周四) - 新用户设置页
-- [ ] `OnboardingScreen` 框架（PageView + 步骤指示器）
-- [ ] Step 1: 基础信息表单
-- [ ] Step 2: 目标设置（圆环 + 滑块）
-- [ ] Step 3: 提醒时间设置
-- [ ] Step 4: 通知权限请求
-- [ ] 本地存储保存用户设置
+### 页面结构
 
-### Day 3 (周五) - 主页面核心 UI
-- [ ] Header 组件
-- [ ] 进度圆环组件 `ProgressRing`
-- [ ] 快捷统计卡片
-- [ ] 快速打卡抽屉弹窗
-- [ ] 打卡逻辑（增加饮水量，更新进度）
+```
+[心连心]
+  - 我的关怀圈
+  - 发送关怀
+  - 关怀足迹
 
-### Day 4 (周六) - 主页面完善
-- [ ] 今日时间表组件（时间轴列表）
-- [ ] 本月打卡日历组件
-- [ ] Toast 通知提示
-- [ ] 页面数据联动
-
-### Day 5 (周日) - 设置页面
-- [ ] 基本设置卡片（目标/体重/风格）
-- [ ] 提醒开关卡片（多个 Switch）
-- [ ] 提醒时间设置
-- [ ] 测试提醒按钮
-- [ ] SharedPreferences 读写
-
-### Day 6 (周一) - 通知 & 串联
-- [ ] 本地通知配置（flutter_local_notifications）
-- [ ] 定时提醒逻辑
-- [ ] 首次启动判断（跳 Onboarding 或 Home）
-- [ ] 页面间导航串联
-- [ ] 数据持久化验证
-
-### Day 7 (周二) - 测试 & 收尾
-- [ ] 全流程冒烟测试
-- [ ] UI 微调 & 动画润色
-- [ ] 响应式适配检查
-- [ ] Bug 修复
-- [ ] 准备演示
+[多喝水]
+  - 我的打卡
+  - 进行中的挑战
+  - 发现挑战
+  - 成就墙
+```
 
 ---
 
-## 后续扩展（MVP 之后）
+### 心连心模块
 
-### Phase 2 - AI Agent 集成
-- 接入 Firebase AI / Gemini 大模型
-- AI 智能生成每日饮水计划
-- 结合天气 API 动态调整
-- 健康小助手对话框
+> 完整参考 `心连心通知界面.html`，保留所有 UI 设计。
 
-### Phase 3 - 数据统计
-- 近 7 日/月/年饮水统计图表
-- 饮品类型分布
-- 健康评分趋势
+#### 页面结构
 
-### Phase 4 - 社交 & 激励
-- 用户排行榜
-- 积分系统
-- 成就勋章体系
-- 积分兑换礼品
+```
+[我的关怀圈]
+  - 联系人列表：头像 + 今日水量进度环 + 操作按钮
+  - AI 温馨提示
+  - + 添加关怀的人
 
-### Phase 5 - 高级功能
-- 饮品百科
-- 体检报告上传 & AI 分析
-- 手环/手表联动
-- Pro 会员系统
+[发送关怀]
+  - 快选话术模板（2×2 网格，4 个预置）
+  - 自定义消息输入框（含 AI 润色/表情按钮）
+  - 收件人多选 Tag
+  - 发送关怀按钮
+
+[关怀足迹]
+  - 时间线：你发出的 / 收到的 / AI自动触发的
+  - 展示对方是否已回复
+```
+
+#### 联系人卡片
+
+每个联系人：
+- 头像（emoji + 渐变背景，按关系类型配色）
+- 状态指示点：🟢 已完成 / 🟠 进行中 / 🔴 还没开始
+- 姓名 + 关系（妈妈 / 爸爸 / 恋人 / 朋友）
+- 今日饮水文字（如 `已喝 1600ml` / `仅喝了 800ml`）
+- 水进度环（小型 SVG 圆环，颜色随百分比变化）
+- 操作按钮：进度低 → `提醒喝水`（pulsing 动画）/ 进度好 → `发送爱心`
+
+#### 话术模板（预置 4 个）
+
+| 场景 | 文案 |
+|---|---|
+| ☀️ 午后提醒 | 下午了，多喝水，我惦记你 |
+| 🌙 睡前关怀 | 睡前喝点水，好梦 |
+| 💪 运动补水 | 刚运动完，记得补水！ |
+| 🌡️ 天气提醒 | 今天这么热，多喝水哦 |
+
+#### 通知交互（本地模拟）
+
+收到关怀通知时，通知操作按钮：
+- **`💧 已喝了！`** → 触发一次喝水记录
+- **`发送回心`** → 打开快速回复面板
+
+发送关怀时 → 调用现有 `NotificationService` 触发本地通知（服务端版本替换为真实推送）
+
+#### 本地数据存储
+
+```
+SharedPreferences:
+  care_contacts   → List<CareContact> JSON
+  care_records    → List<CareRecord> JSON（近 30 天）
+
+mock 策略：
+  联系人水量 → 每日随机生成（在合理范围内波动）
+  不需要对方真实 app，全部本地模拟
+```
 
 ---
 
-## 参考资源
-- 竞品 App: 喝水时间（功能简约、评价好）
-- UI 原型: `渴了么-手机版.html`（手机端原型）
-- UI 原型: `渴了么-产品功能演示.html`（桌面端完整演示）
-- 产品需求: `渴了么-AI产品开发计划书.docx`
-- Flutter AI Toolkit: https://github.com/flutter/ai
-- Flutter Skills: https://github.com/flutter/skills
+### 多喝水模块
+
+> 偏 Duolingo「挑战+成就」感，但保持极简。**不做联赛排行榜**。
+
+#### 页面结构
+
+```
+[我的打卡]
+  - 当前连续打卡天数（streak 火焰展示）
+  - 本周完成情况（7格日历点）
+
+[进行中的挑战]
+  - 搭子计划 / 当前挑战的进度卡片
+
+[发现挑战]
+  - 挑战卡片列表（可参与的挑战）
+
+[成就墙]（简版）
+  - 已解锁成就展示（收藏感）
+```
+
+#### 打卡展示
+
+- 火焰 🔥 + 数字：`连续 7 天`
+- 今天未打卡时，火焰变灰 + 轻微抖动提示
+- 本周 7 格：已完成=蓝色水滴，未完成=空圈，今天=特殊高亮
+
+> 复用 `UserProvider` 里现有的 streak 数据，**不改动任何现有逻辑**。
+
+#### 挑战类型（MVP 预置 3 种）
+
+| 挑战 | 说明 | 时长 | 奖励 |
+|---|---|---|---|
+| 🤝 搭子计划 | 邀请好友组队，共同每日达标 | 30 天 | 「搭子勋章」 |
+| 🔥 铁人挑战 | 连续 7 天每天 100% 完成 | 7 天 | 「铁人勋章」 |
+| 🌅 早起补水 | 连续 5 天 8 点前喝第一杯 | 5 天 | 「晨型人勋章」 |
+
+挑战卡片展示：
+- 挑战名 + 简介
+- 进度条（`已完成 X / 目标 Y 天`）
+- 奖励勋章预览
+- `参与挑战` / `已参与`（本地状态）
+
+#### 成就墙（简版）
+
+- 6~8 个成就格子
+- 已解锁 → 彩色 + 解锁日期
+- 未解锁 → 灰色模糊（知道存在但看不清）
+- 解锁时弹出庆祝动画（参考 Duolingo 成就解锁效果）
+
+**MVP 预置成就（基于本地真实数据自动解锁）**：
+
+| 成就 | 触发条件 |
+|---|---|
+| 💧 初心一滴 | 第一次喝水记录 |
+| 🔥 一周连击 | 连续达标 7 天 |
+| 🌊 月度坚持 | 连续达标 30 天 |
+| ❤️ 首次关怀 | 第一次发送心连心关怀 |
+| 🤝 搭子精神 | 完成搭子计划挑战 |
+| 🏆 铁人 | 完成铁人挑战 |
+
+---
+
+## 四、数据模型（新增，不改动现有模型）
+
+### CareContact
+
+```dart
+class CareContact {
+  final String id;
+  final String name;
+  final String relationship; // 'mom' | 'dad' | 'partner' | 'friend'
+  final String avatarEmoji;
+  final int mockDailyGoalMl;  // mock，服务端版本删除
+  int mockTodayMl;            // 每日随机生成
+}
+```
+
+### CareRecord
+
+```dart
+class CareRecord {
+  final String id;
+  final String fromLabel;   // '你' 或联系人名
+  final String toLabel;
+  final String message;
+  final DateTime sentAt;
+  final bool isReplied;
+  final String? replyText;
+}
+```
+
+### Achievement
+
+```dart
+class Achievement {
+  final String id;
+  final String title;
+  final String iconEmoji;
+  final String description;
+  final bool isUnlocked;
+  final DateTime? unlockedAt;
+}
+```
+
+### Challenge
+
+```dart
+class Challenge {
+  final String id;
+  final String title;
+  final String description;
+  final String emoji;
+  final int durationDays;
+  final String rewardBadgeId;
+  bool isJoined;
+  int currentProgress;  // 本地计算
+}
+```
+
+---
+
+## 五、Provider（新增）
+
+```
+lib/features/community/providers/heart_provider.dart
+lib/features/community/providers/plaza_provider.dart
+```
+
+### HeartProvider
+- CRUD 联系人（存 SharedPreferences）
+- 发送关怀（触发本地通知 + 存 CareRecord）
+- 每日刷新 mock 联系人水量数据
+
+### PlazaProvider
+- 管理挑战列表（预置 mock）
+- 跟踪挑战进度（监听 UserProvider 的 streak / todayMl）
+- 成就解锁逻辑（监听 UserProvider + HeartProvider 数据）
+- 预留 `Future<void> syncToServer()` 空实现
+
+---
+
+## 六、文件结构（新增部分）
+
+```
+lib/features/
+  community/
+    screens/
+      community_screen.dart
+      add_contact_screen.dart
+    widgets/
+      care_contact_card.dart
+      water_ring_mini.dart
+      care_template_chip.dart
+      care_timeline_item.dart
+      streak_display.dart
+      challenge_card.dart
+      achievement_badge.dart
+    providers/
+      heart_provider.dart
+      plaza_provider.dart
+    models/
+      care_contact.dart
+      care_record.dart
+      achievement.dart
+      challenge.dart
+```
+
+---
+
+## 七、不在 MVP 范围内（明确排除）
+
+- ❌ 联赛排行榜
+- ❌ XP / 积分系统改造
+- ❌ 现有首页/安排/AI助手/设置 Tab 修改
+- ❌ 好友实时同步（需服务端）
+- ❌ 跨设备推送（需服务端）
+- ❌ 手表/手环同步（需服务端）
+- ❌ 吉祥物角色
+
+---
+
+## 八、服务端预留（另存，后续开发）
+
+| 功能 | 对应 API |
+|---|---|
+| 心连心跨设备推送 | POST /care/send |
+| 好友关系管理 | GET/POST /friends |
+| 好友实时水量 | WebSocket /friends/water-status |
+| 搭子计划组队 | POST /challenges/invite |
+| 成就云同步 | POST /sync/achievements |
+
+Provider 中预留空方法，UI 层无需改动，上线服务端后替换实现即可。
+
+---
+
+## 九、开发顺序
+
+1. 数据模型 + Provider（CareContact, CareRecord, Achievement, Challenge）
+2. 社区 Tab — 心连心模块（完整按 HTML 稿实现）
+3. 社区 Tab — 多喝水模块（打卡展示 → 挑战卡片 → 成就墙）
+4. 导航接入（在 main_shell.dart 加入社区 Tab）
+5. 动效打磨（成就解锁、发送关怀反馈）

@@ -37,12 +37,40 @@ Do NOT introduce `data/domain/presentation` layers or `usecases/repositories` ab
 
 ## Widget Rules
 
-- Use `const` constructors wherever possible.
+- Use `const` constructors wherever possible — this is Flutter's primary rebuild optimization. Mark widgets, lists, padding, decoration, and text styles `const` aggressively.
+- When extracting UI sections: prefer an independent `StatelessWidget` class for subtrees that are stable and self-contained (better widget identity, enables `const`). Use `_buildXxx()` helper methods for layout structure that directly reads parent `State` fields. Never return widgets from methods when a `const StatelessWidget` would do.
 - Use `ValueKey` or `ObjectKey` when widgets reorder in lists.
-- Keep `build()` short — extract `_buildXxx()` helper methods for sections.
-- Always `dispose()` controllers: `AnimationController`, `TextEditingController`, `ScrollController`, `StreamSubscription`.
-- Wrap unstable subtrees with `ErrorWidget.builder` or a custom error boundary widget to prevent full-screen crashes.
+- Always `dispose()` controllers in `State.dispose()`, in this order — own resources first, then `super.dispose()`:
+  - `AnimationController`
+  - `TextEditingController`
+  - `ScrollController`
+  - `PageController`
+  - `StreamSubscription` (call `.cancel()`)
+  - `removeListener` on any `ChangeNotifier` before the above
+- Wrap unstable subtrees with a custom error boundary widget to prevent full-screen crashes.
 - Use `RepaintBoundary` around expensive custom paint widgets (e.g., `ProgressRing`).
+
+## Async Patterns
+
+**`mounted` checks are mandatory after every `await`** — not just after network calls:
+
+```dart
+// Dialog awaits — most commonly missed
+onTap: () async {
+  final picked = await showTimePicker(context: context, ...);
+  if (!mounted) return;   // widget may have unmounted during dialog
+  if (picked != null) onChanged(picked);
+},
+
+// Standard async init
+Future<void> _initData() async {
+  final result = await someService.load();
+  if (!mounted) return;
+  setState(() => _data = result);
+}
+```
+
+Check `mounted` (or `context.mounted` for `BuildContext` usage) after **all** of: `showDialog`, `showTimePicker`, `showModalBottomSheet`, network calls, permission requests, `Future.delayed`.
 
 ## Performance
 
@@ -51,6 +79,7 @@ Do NOT introduce `data/domain/presentation` layers or `usecases/repositories` ab
 - Avoid `Opacity` widget for hiding; prefer `Visibility` or conditional rendering.
 - Cache network images with `CachedNetworkImage` if image loading is added.
 - Build release APKs with `--split-per-abi` to reduce size.
+- Move expensive one-time computations out of `build()` into `initState()`, `didChangeDependencies()`, or provider methods — `build()` can be called many times per second.
 
 ## Testing
 
@@ -65,5 +94,7 @@ Do NOT introduce `data/domain/presentation` layers or `usecases/repositories` ab
 - Putting business logic (calculations, persistence, API calls) inside widget `build()` methods.
 - Deeply nesting widgets (>5 levels) — extract into named widgets or helper methods.
 - Hardcoding colors/sizes — use `AppColors`, `AppTheme`, and theme constants.
-- Forgetting to check `mounted` before calling `setState` after async operations.
+- Missing `mounted` check after async operations — includes `showTimePicker`, `showDialog`, `showModalBottomSheet`, permission requests, and network calls, not only `setState` paths.
 - Creating new object instances inside `build()` that could be `const` or cached.
+- Calling `setState` from inside a `dispose()` — always guard with `mounted`.
+- Forgetting to `cancel()` a `StreamSubscription` in `dispose()`.

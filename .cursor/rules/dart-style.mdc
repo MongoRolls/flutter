@@ -32,8 +32,10 @@ import '../widgets/chat_widget.dart';
 
 ## Widget Best Practices
 ```dart
-// Prefer const constructors
+// Prefer const constructors — Flutter's primary rebuild optimization
 const MyWidget({super.key});
+const EdgeInsets.all(16);
+const SizedBox(height: 8);
 
 // Use named parameters
 Widget build({
@@ -42,9 +44,20 @@ Widget build({
   VoidCallback? onTap,
 });
 
-// Extract build methods for complex widgets
-Widget _buildHeader() { ... }
-Widget _buildContent() { ... }
+// Prefer independent StatelessWidget for stable, self-contained subtrees
+// (enables widget identity + const; better than returning from a method)
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Text(title, style: ...);
+}
+
+// Use _buildXxx() helper methods only when the subtree reads parent State directly
+Widget _buildContent() {
+  return Text(_controller.text);  // needs access to _controller
+}
 ```
 
 ## Async/Await
@@ -53,12 +66,19 @@ Widget _buildContent() { ... }
 Future<void> loadData() async {
   try {
     final result = await api.fetchData();
+    if (!mounted) return;  // check mounted after every await
     setState(() => data = result);
   } catch (e) {
-    // Handle error appropriately
     debugPrint('Error: $e');
   }
 }
+
+// Dialog awaits require mounted checks too — most commonly missed
+onTap: () async {
+  final picked = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+  if (!mounted) return;  // widget may have unmounted while dialog was open
+  if (picked != null) onChanged(picked);
+},
 ```
 
 ## Documentation
