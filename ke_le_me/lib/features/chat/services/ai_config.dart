@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AiConfig {
@@ -13,6 +14,7 @@ class AiConfig {
   final String model;
   final double temperature;
   final int maxTokens;
+  final String keySource;
 
   const AiConfig({
     this.baseUrl = 'https://api.deepseek.com',
@@ -20,17 +22,32 @@ class AiConfig {
     this.model = 'deepseek-chat',
     this.temperature = 0.7,
     this.maxTokens = 2048,
+    this.keySource = 'none',
   });
 
   /// Priority: --dart-define > SharedPreferences > built-in key.
   static Future<AiConfig> load() async {
+    String key;
+    String source;
     if (_envApiKey.isNotEmpty) {
-      return const AiConfig(apiKey: _envApiKey);
+      key = _envApiKey;
+      source = 'dart-define';
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_prefsKey) ?? '';
+      if (saved.isNotEmpty) {
+        key = saved;
+        source = 'saved';
+      } else {
+        key = _builtinKey;
+        source = 'builtin';
+      }
     }
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_prefsKey) ?? '';
-    final key = saved.isNotEmpty ? saved : _builtinKey;
-    return AiConfig(apiKey: key);
+    final masked = key.length > 8
+        ? '${key.substring(0, 5)}...${key.substring(key.length - 4)}'
+        : '***';
+    debugPrint('AiConfig: source=$source, key=$masked');
+    return AiConfig(apiKey: key, keySource: source);
   }
 
   static Future<void> saveApiKey(String key) async {

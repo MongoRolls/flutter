@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import 'ai_config.dart';
 import '../models/chat_message.dart';
@@ -57,17 +58,29 @@ class AiService {
     }
 
     try {
+      final requestBody = {
+        'model': config.model,
+        'messages': messages,
+        'tools': tools.isEmpty ? null : tools,
+        'tool_choice': tools.isEmpty ? null : 'auto',
+        'temperature': config.temperature,
+        'max_tokens': config.maxTokens,
+        'stream': true,
+      }..removeWhere((_, v) => v == null);
+
+      debugPrint('=== DeepSeek API Request ===');
+      debugPrint('messages count: ${messages.length}');
+      for (final m in messages) {
+        final role = m['role'];
+        final content = m['content'];
+        final toolCalls = m['tool_calls'];
+        final toolCallId = m['tool_call_id'];
+        debugPrint('  [$role] content=${content == null ? 'null' : '"${content.toString().length > 60 ? content.toString().substring(0, 60) + "..." : content}"'}${toolCalls != null ? ' tool_calls=${(toolCalls as List).length}' : ''}${toolCallId != null ? ' tool_call_id=$toolCallId' : ''}');
+      }
+
       final response = await _dio.post<ResponseBody>(
         '/v1/chat/completions',
-        data: {
-          'model': config.model,
-          'messages': messages,
-          'tools': tools.isEmpty ? null : tools,
-          'tool_choice': tools.isEmpty ? null : 'auto',
-          'temperature': config.temperature,
-          'max_tokens': config.maxTokens,
-          'stream': true,
-        }..removeWhere((_, v) => v == null),
+        data: requestBody,
         options: Options(responseType: ResponseType.stream),
       );
 
@@ -169,8 +182,23 @@ class AiService {
       String msg;
       if (e.response != null) {
         final status = e.response!.statusCode;
-        msg = 'API 错误 ($status)';
-        if (status == 401) msg = 'API Key 无效，请检查配置';
+        // Try to extract the actual error message from response body
+        String? apiErrMsg;
+        try {
+          final body = e.response!.data;
+          if (body is Map) {
+            final err = body['error'];
+            if (err is Map) apiErrMsg = err['message'] as String?;
+          } else if (body is String && body.isNotEmpty) {
+            final decoded = jsonDecode(body) as Map?;
+            final err = decoded?['error'];
+            if (err is Map) apiErrMsg = err['message'] as String?;
+          }
+        } catch (_) {}
+        debugPrint('DeepSeek API $status error: $apiErrMsg\nraw: ${e.response?.data}');
+        msg = 'API 错误 ($status)${apiErrMsg != null ? ': $apiErrMsg' : ''}';
+        if (status == 401) msg = 'API Key 无效或已过期，请在设置中更换 Key';
+        if (status == 400) msg = 'API 请求格式错误${apiErrMsg != null ? ': $apiErrMsg' : ''}';
         if (status == 429) msg = '请求太频繁，请稍后再试';
       } else if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {

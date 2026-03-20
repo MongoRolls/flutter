@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/drink_log.dart';
+import '../models/drink_preset.dart';
 import '../models/user_profile.dart';
 import '../models/weather_data.dart';
 import '../services/location_service.dart';
@@ -22,6 +23,7 @@ class UserProvider extends ChangeNotifier {
   WeatherData? _weatherData;
   GoalPrediction? _goalPrediction;
   int? _dynamicGoalMl;
+  List<DrinkPreset> _drinkPresets = List.of(DrinkPreset.defaults);
 
   UserProfile get profile => _profile;
   int get todayMl => _todayMl;
@@ -29,12 +31,14 @@ class UserProvider extends ChangeNotifier {
   double get progress => _profile.dailyGoalMl > 0
       ? (_todayMl / _profile.dailyGoalMl).clamp(0.0, 1.0)
       : 0.0;
-  int get remainingMl => (_profile.dailyGoalMl - _todayMl).clamp(0, _profile.dailyGoalMl);
+  int get remainingMl =>
+      (_profile.dailyGoalMl - _todayMl).clamp(0, _profile.dailyGoalMl);
   Map<int, int> get monthlyHits => Map.unmodifiable(_monthlyHits);
   int get streakDays => _streakDays;
   WeatherData? get weatherData => _weatherData;
   GoalPrediction? get goalPrediction => _goalPrediction;
   int? get dynamicGoalMl => _dynamicGoalMl;
+  List<DrinkPreset> get drinkPresets => List.unmodifiable(_drinkPresets);
 
   String get _currentDate {
     final now = DateTime.now();
@@ -60,9 +64,10 @@ class UserProvider extends ChangeNotifier {
         _logs.addAll(list.map((e) => DrinkLog.fromMap(e)));
       }
     } else {
-      // 新的一天，保存昨天的记录到月度数据后清零
-      if (savedDate.isNotEmpty && _todayMl > 0) {
-        await _archiveDayData(savedDate, _todayMl);
+      // 新的一天，先从 prefs 读取昨天的实际数据再归档，然后清零
+      final prevMl = prefs.getInt('today_ml') ?? 0;
+      if (savedDate.isNotEmpty && prevMl > 0) {
+        await _archiveDayData(savedDate, prevMl);
       }
       _todayMl = 0;
       _logs.clear();
@@ -71,6 +76,9 @@ class UserProvider extends ChangeNotifier {
       await prefs.setString('today_logs', '[]');
     }
     _todayDate = today;
+
+    // 加载自定义杯子预设
+    _loadDrinkPresets(prefs);
 
     // 加载月度打卡和连续天数
     _loadMonthlyHits(prefs);
@@ -93,7 +101,57 @@ class UserProvider extends ChangeNotifier {
     saveProfile();
   }
 
-  Future<void> addDrink(int ml, {String type = '💧', String desc = '喝水'}) async {
+  // ── 杯子预设管理 ──
+
+  void _loadDrinkPresets(SharedPreferences prefs) {
+    final json = prefs.getString('drink_presets');
+    if (json != null) {
+      final list = jsonDecode(json) as List;
+      _drinkPresets = list.map((e) => DrinkPreset.fromMap(e)).toList();
+    }
+  }
+
+  Future<void> _saveDrinkPresets() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'drink_presets',
+      jsonEncode(_drinkPresets.map((e) => e.toMap()).toList()),
+    );
+  }
+
+  Future<void> addDrinkPreset(DrinkPreset preset) async {
+    _drinkPresets.add(preset);
+    await _saveDrinkPresets();
+    notifyListeners();
+  }
+
+  Future<void> removeDrinkPreset(int index) async {
+    if (index >= 0 && index < _drinkPresets.length) {
+      _drinkPresets.removeAt(index);
+      await _saveDrinkPresets();
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateDrinkPreset(int index, DrinkPreset preset) async {
+    if (index >= 0 && index < _drinkPresets.length) {
+      _drinkPresets[index] = preset;
+      await _saveDrinkPresets();
+      notifyListeners();
+    }
+  }
+
+  Future<void> resetDrinkPresets() async {
+    _drinkPresets = List.of(DrinkPreset.defaults);
+    await _saveDrinkPresets();
+    notifyListeners();
+  }
+
+  Future<void> addDrink(
+    int ml, {
+    String type = '💧',
+    String desc = '喝水',
+  }) async {
     // 检查是否跨天
     final today = _currentDate;
     if (_todayDate != today) {
@@ -110,16 +168,22 @@ class UserProvider extends ChangeNotifier {
 
     _todayMl = (_todayMl + ml).clamp(0, 9999);
     final now = DateTime.now();
-    _logs.add(DrinkLog(
-      time: '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-      icon: type,
-      description: desc,
-      ml: ml,
-    ));
+    _logs.add(
+      DrinkLog(
+        time:
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+        icon: type,
+        description: desc,
+        ml: ml,
+      ),
+    );
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('today_date', today);
     await prefs.setInt('today_ml', _todayMl);
-    await prefs.setString('today_logs', jsonEncode(_logs.map((e) => e.toMap()).toList()));
+    await prefs.setString(
+      'today_logs',
+      jsonEncode(_logs.map((e) => e.toMap()).toList()),
+    );
 
     // 更新月度打卡数据
     final day = now.day;

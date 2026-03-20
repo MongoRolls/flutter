@@ -54,7 +54,13 @@ class _DebugScreenState extends State<DebugScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: const BoxDecoration(
         color: AppColors.bgCard,
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -67,12 +73,22 @@ class _DebugScreenState extends State<DebugScreen> {
                 shape: BoxShape.circle,
                 color: AppColors.bgSection,
               ),
-              child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.textSecondary),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          const Text('调试工具',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const Text(
+            '调试工具',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -80,8 +96,14 @@ class _DebugScreenState extends State<DebugScreen> {
               color: AppColors.orangeLight,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Text('DEBUG',
-                style: TextStyle(fontSize: 10, color: AppColors.orange, fontWeight: FontWeight.w700)),
+            child: const Text(
+              'DEBUG',
+              style: TextStyle(
+                fontSize: 10,
+                color: AppColors.orange,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -95,7 +117,13 @@ class _DebugScreenState extends State<DebugScreen> {
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,21 +132,34 @@ class _DebugScreenState extends State<DebugScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               children: [
-                const Text('📋 输出日志',
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                const Text(
+                  '📋 输出日志',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
                 const Spacer(),
                 if (_results.isNotEmpty)
                   GestureDetector(
                     onTap: () => setState(() => _results.clear()),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.bgSection,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text('清空',
-                          style: TextStyle(fontSize: 10, color: AppColors.textHint)),
+                      child: const Text(
+                        '清空',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textHint,
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -127,11 +168,16 @@ class _DebugScreenState extends State<DebugScreen> {
           Expanded(
             child: _results.isEmpty
                 ? const Center(
-                    child: Text('执行测试操作后结果将显示在此处',
-                        style: TextStyle(fontSize: 12, color: AppColors.textHint)),
+                    child: Text(
+                      '执行测试操作后结果将显示在此处',
+                      style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                    ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     reverse: true,
                     itemCount: _results.length,
                     itemBuilder: (context, index) {
@@ -163,12 +209,19 @@ class _DebugScreenState extends State<DebugScreen> {
               Expanded(
                 child: Text(
                   result.message,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
               Text(
                 result.formattedTime,
-                style: GoogleFonts.spaceMono(fontSize: 9, color: AppColors.textHint),
+                style: GoogleFonts.spaceMono(
+                  fontSize: 9,
+                  color: AppColors.textHint,
+                ),
               ),
             ],
           ),
@@ -183,7 +236,10 @@ class _DebugScreenState extends State<DebugScreen> {
               ),
               child: Text(
                 result.detail!,
-                style: GoogleFonts.spaceMono(fontSize: 9, color: AppColors.textSecondary),
+                style: GoogleFonts.spaceMono(
+                  fontSize: 9,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -196,7 +252,9 @@ class _DebugScreenState extends State<DebugScreen> {
     final info = DebugService.instance.platformInfo;
     final platform = info['platform'] ?? '-';
     final dartVersion = info['dartVersion'] ?? '-';
-    final dartShort = dartVersion.length > 30 ? '${dartVersion.substring(0, 30)}…' : dartVersion;
+    final dartShort = dartVersion.length > 30
+        ? '${dartVersion.substring(0, 30)}…'
+        : dartVersion;
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,13 +276,18 @@ class _DebugScreenState extends State<DebugScreen> {
         children: [
           SizedBox(
             width: 80,
-            child: Text(label,
-                style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.textHint),
+            ),
           ),
           Expanded(
             child: Text(
               value,
-              style: GoogleFonts.spaceMono(fontSize: 11, color: AppColors.textPrimary),
+              style: GoogleFonts.spaceMono(
+                fontSize: 11,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -243,12 +306,18 @@ class _DebugScreenState extends State<DebugScreen> {
             label: '检查通知权限',
             icon: Icons.notifications_outlined,
             color: AppColors.blue,
-            onTap: () => _runTest('检查通知权限', () => DebugService.instance.checkNotificationPermission()),
+            onTap: () => _runTest(
+              '检查通知权限',
+              () => DebugService.instance.checkNotificationPermission(),
+            ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('提醒风格:', style: TextStyle(fontSize: 11, color: AppColors.textHint)),
+              const Text(
+                '提醒风格:',
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
               const SizedBox(width: 8),
               ...['温柔', '活泼', '严肃'].map((s) {
                 final isSelected = s == _selectedStyle;
@@ -257,17 +326,26 @@ class _DebugScreenState extends State<DebugScreen> {
                   child: GestureDetector(
                     onTap: () => setState(() => _selectedStyle = s),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.blue : AppColors.bgSection,
+                        color: isSelected
+                            ? AppColors.blue
+                            : AppColors.bgSection,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         s,
                         style: TextStyle(
                           fontSize: 11,
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textSecondary,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -282,14 +360,21 @@ class _DebugScreenState extends State<DebugScreen> {
             icon: Icons.send,
             color: AppColors.orange,
             onTap: () => _runTest(
-                '触发即时通知', () => DebugService.instance.showImmediateTestNotification(_selectedStyle)),
+              '触发即时通知',
+              () => DebugService.instance.showImmediateTestNotification(
+                _selectedStyle,
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           _actionRow(
             label: '调度提醒(7天)',
             icon: Icons.schedule,
             color: AppColors.green,
-            onTap: () => _runTest('调度提醒(7天)', () => DebugService.instance.scheduleTestReminders(_p.profile)),
+            onTap: () => _runTest(
+              '调度提醒(7天)',
+              () => DebugService.instance.scheduleTestReminders(_p.profile),
+            ),
           ),
           const SizedBox(height: 8),
           _actionRow(
@@ -329,7 +414,10 @@ class _DebugScreenState extends State<DebugScreen> {
             label: '添加测试饮水250ml',
             icon: Icons.add_circle_outline,
             color: AppColors.green,
-            onTap: () => _runTest('添加测试饮水', () => DebugService.instance.addTestDrink(_p)),
+            onTap: () => _runTest(
+              '添加测试饮水',
+              () => DebugService.instance.addTestDrink(_p),
+            ),
           ),
           const SizedBox(height: 8),
           _actionRow(
@@ -359,7 +447,10 @@ class _DebugScreenState extends State<DebugScreen> {
             label: '导出全部SharedPrefs',
             icon: Icons.download_outlined,
             color: AppColors.blue,
-            onTap: () => _runTest('导出全部SharedPrefs', () => DebugService.instance.dumpAllPrefs()),
+            onTap: () => _runTest(
+              '导出全部SharedPrefs',
+              () => DebugService.instance.dumpAllPrefs(),
+            ),
           ),
           const SizedBox(height: 8),
           _actionRow(
@@ -381,15 +472,19 @@ class _DebugScreenState extends State<DebugScreen> {
             isDestructive: true,
             onTap: () => _runTestWithConfirm(
               '重置全部数据',
-              '确认重置所有数据？此操作不可恢复，将返回引导页。',
+              '确认重置所有数据？此操作不可恢复，将返回引导页。\n\n将清空：用户档案、饮水记录、健康档案、会话摘要、自定义提醒。',
               () async {
-                final result = await DebugService.instance.clearAllData();
+                final result = await DebugService.instance.clearAllData(_p);
                 if (mounted) {
                   setState(() => _results.insert(0, result));
                   if (result.status == TestStatus.success) {
                     Future.delayed(const Duration(milliseconds: 500), () {
                       if (mounted) {
-                        Navigator.pushNamedAndRemoveUntil(context, '/onboarding', (route) => false);
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/onboarding',
+                          (route) => false,
+                        );
                       }
                     });
                   }
@@ -433,7 +528,10 @@ class _DebugScreenState extends State<DebugScreen> {
                       child: SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: color),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: color,
+                        ),
                       ),
                     )
                   : Icon(icon, size: 16, color: color),
@@ -445,12 +543,16 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: isDestructive ? AppColors.orange : AppColors.textPrimary,
+                  color: isDestructive
+                      ? AppColors.orange
+                      : AppColors.textPrimary,
                 ),
               ),
             ),
             Icon(
-              isDestructive ? Icons.warning_amber_outlined : Icons.chevron_right,
+              isDestructive
+                  ? Icons.warning_amber_outlined
+                  : Icons.chevron_right,
               size: 16,
               color: isDestructive ? AppColors.orange : AppColors.textHint,
             ),
@@ -460,7 +562,10 @@ class _DebugScreenState extends State<DebugScreen> {
     );
   }
 
-  Future<void> _runTest(String label, Future<TestResult> Function() test) async {
+  Future<void> _runTest(
+    String label,
+    Future<TestResult> Function() test,
+  ) async {
     setState(() => _loading[label] = true);
     try {
       final result = await test();
@@ -473,13 +578,16 @@ class _DebugScreenState extends State<DebugScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _results.insert(0, TestResult(
-            status: TestStatus.failure,
-            label: label,
-            message: '执行失败',
-            detail: e.toString(),
-            timestamp: DateTime.now(),
-          ));
+          _results.insert(
+            0,
+            TestResult(
+              status: TestStatus.failure,
+              label: label,
+              message: '执行失败',
+              detail: e.toString(),
+              timestamp: DateTime.now(),
+            ),
+          );
           _loading[label] = false;
         });
       }
@@ -496,12 +604,21 @@ class _DebugScreenState extends State<DebugScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('确认操作', style: TextStyle(color: AppColors.textPrimary)),
-        content: Text(confirmMessage, style: const TextStyle(color: AppColors.textSecondary)),
+        title: const Text(
+          '确认操作',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          confirmMessage,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消', style: TextStyle(color: AppColors.textHint)),
+            child: const Text(
+              '取消',
+              style: TextStyle(color: AppColors.textHint),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -516,19 +633,21 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   Widget _sectionTitle(String emoji, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
-            Text(text,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.5,
-                )),
-          ],
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.5,
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }

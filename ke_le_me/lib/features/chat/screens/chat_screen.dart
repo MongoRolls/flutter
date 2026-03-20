@@ -23,7 +23,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  late ChatProvider _chatProvider;
+  ChatProvider? _chatProvider;
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   bool _initialized = false;
@@ -36,41 +36,40 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _initServices() async {
     final config = await AiConfig.load();
+    // 异步等待期间用户可能已经离开页面，需要检查 mounted
+    if (!mounted) return;
     final aiService = AiService(config: config);
-    _chatProvider = ChatProvider(
+    final provider = ChatProvider(
       aiService: aiService,
       userProvider: widget.userProvider,
     );
-    _chatProvider.addListener(_onChatChanged);
-    _chatProvider.onToolExecuted = (toolName, result) {
+    provider.addListener(_onChatChanged);
+    provider.onToolExecuted = (toolName, result) {
       if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
       if (toolName == 'save_health_note' && result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('📝 已记住：${result['saved_content'] ?? ''}'),
-            backgroundColor: AppColors.bgCard,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          _buildToolSnackBar('📝 已记住：${result['saved_content'] ?? ''}'),
         );
       } else if (toolName == 'set_reminder' && result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('⏰ 已设置提醒：${result['title'] ?? ''}'),
-            backgroundColor: AppColors.bgCard,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          _buildToolSnackBar('⏰ 已设置提醒：${result['title'] ?? ''}'),
+        );
+      } else if (toolName == 'add_drink' && result['success'] == true) {
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          _buildToolSnackBar('💧 已记录 ${result['recorded_ml'] ?? 0}ml'),
         );
       }
     };
+    _chatProvider = provider;
     _initChat();
   }
 
   Future<void> _initChat() async {
-    await _chatProvider.init();
+    await _chatProvider?.init();
     if (mounted) {
       setState(() => _initialized = true);
       _scrollToBottom();
@@ -96,10 +95,24 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  SnackBar _buildToolSnackBar(String text) {
+    return SnackBar(
+      content: Text(
+        text,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+      ),
+      backgroundColor: AppColors.blue.withValues(alpha: 0.9),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.only(bottom: 60, left: 20, right: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+  }
+
   Future<void> _sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || _chatProvider == null) return;
     _textController.clear();
-    await _chatProvider.sendMessage(text);
+    await _chatProvider!.sendMessage(text);
   }
 
   Future<void> _confirmClear() async {
@@ -112,7 +125,10 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              '取消',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -122,14 +138,14 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
     if (confirmed == true) {
-      await _chatProvider.clearHistory();
+      await _chatProvider?.clearHistory();
     }
   }
 
   @override
   void dispose() {
-    _chatProvider.removeListener(_onChatChanged);
-    _chatProvider.dispose();
+    _chatProvider?.removeListener(_onChatChanged);
+    _chatProvider?.dispose();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -141,8 +157,9 @@ class _ChatScreenState extends State<ChatScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        if (_chatProvider.shouldGenerateSummary) {
-          unawaited(_chatProvider.generateSummary());
+        final provider = _chatProvider;
+        if (provider != null && provider.shouldGenerateSummary) {
+          unawaited(provider.generateSummary());
         }
         if (context.mounted) Navigator.of(context).pop();
       },
@@ -163,8 +180,9 @@ class _ChatScreenState extends State<ChatScreen> {
         icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
         color: AppColors.textPrimary,
         onPressed: () {
-          if (_chatProvider.shouldGenerateSummary) {
-            unawaited(_chatProvider.generateSummary());
+          final provider = _chatProvider;
+          if (provider != null && provider.shouldGenerateSummary) {
+            unawaited(provider.generateSummary());
           }
           Navigator.pop(context);
         },
@@ -179,14 +197,12 @@ class _ChatScreenState extends State<ChatScreen> {
               shape: BoxShape.circle,
               color: AppColors.blueLight,
             ),
-            child: Center(
-              child: Text(
-                '渴',
-                style: GoogleFonts.notoSansSc(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.blue,
-                ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/mascot.png',
+                width: 28,
+                height: 28,
+                fit: BoxFit.cover,
               ),
             ),
           ),
@@ -220,24 +236,25 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildBody() {
-    final messages = _chatProvider.messages;
-    final isGenerating = _chatProvider.isGenerating;
+    final messages = _chatProvider!.messages;
+    final isGenerating = _chatProvider!.isGenerating;
 
-    // 判断是否显示 typing indicator：正在生成且最后一条 assistant 消息内容为空
-    final showTyping = isGenerating &&
-        (messages.isEmpty ||
-            messages.last.role != MessageRole.assistant ||
-            messages.last.content.isEmpty);
+    // 只显示 user 和有文字内容的 assistant 消息
+    // 过滤掉：system / tool 消息、streaming 占位（typing indicator 代替）、
+    // 仅含 tool_calls 但无文字的 assistant 消息（中间轮次的隐形调用）
+    final visibleMessages = messages.where((m) {
+      if (m.role == MessageRole.user) return true;
+      if (m.role != MessageRole.assistant) return false;
+      if (m.content.isEmpty) return false;
+      return true;
+    }).toList();
 
-    // 只显示 user 和 assistant 消息（隐藏 system / tool）
-    // 同时过滤掉内容为空的 streaming 占位消息（由 typing indicator 代替）
-    final visibleMessages = messages
-        .where((m) =>
-            (m.role == MessageRole.user || m.role == MessageRole.assistant) &&
-            !(m.role == MessageRole.assistant &&
-                m.content.isEmpty &&
-                m.status == MessageStatus.streaming))
-        .toList();
+    // 正在生成且没有正在 streaming 文字的 assistant 消息时，展示 typing indicator
+    final showTyping =
+        isGenerating &&
+        (visibleMessages.isEmpty ||
+            visibleMessages.last.role != MessageRole.assistant ||
+            visibleMessages.last.status != MessageStatus.streaming);
 
     final showSuggestions = visibleMessages.length <= 1 && !isGenerating;
 
@@ -253,9 +270,8 @@ class _ChatScreenState extends State<ChatScreen> {
               if (showTyping && index == 0) {
                 return const TypingIndicator();
               }
-              final msgIndex = visibleMessages.length -
-                  1 -
-                  (showTyping ? index - 1 : index);
+              final msgIndex =
+                  visibleMessages.length - 1 - (showTyping ? index - 1 : index);
               return ChatBubble(message: visibleMessages[msgIndex]);
             },
           ),
@@ -300,9 +316,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
                 onSubmitted: _sendMessage,
-                enabled: !_chatProvider.isGenerating,
+                enabled: !(_chatProvider?.isGenerating ?? true),
                 decoration: InputDecoration(
-                  hintText: _chatProvider.isGenerating ? '小渴正在思考...' : '输入消息...',
+                  hintText: (_chatProvider?.isGenerating ?? false)
+                      ? '小可正在思考...'
+                      : '输入消息...',
                   hintStyle: const TextStyle(
                     color: AppColors.textHint,
                     fontSize: 14,
@@ -322,7 +340,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: _chatProvider.isGenerating
+            onTap: (_chatProvider?.isGenerating ?? true)
                 ? null
                 : () => _sendMessage(_textController.text),
             child: AnimatedContainer(
@@ -331,7 +349,7 @@ class _ChatScreenState extends State<ChatScreen> {
               height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _chatProvider.isGenerating
+                color: (_chatProvider?.isGenerating ?? true)
                     ? AppColors.textHint
                     : AppColors.blue,
               ),

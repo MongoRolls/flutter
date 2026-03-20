@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../models/chat_message.dart';
@@ -49,14 +49,12 @@ class ChatBubble extends StatelessWidget {
         shape: BoxShape.circle,
         color: AppColors.blueLight,
       ),
-      child: Center(
-        child: Text(
-          '渴',
-          style: GoogleFonts.notoSansSc(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.blue,
-          ),
+      child: ClipOval(
+        child: Image.asset(
+          'assets/images/mascot.png',
+          width: 32,
+          height: 32,
+          fit: BoxFit.cover,
         ),
       ),
     );
@@ -66,6 +64,18 @@ class ChatBubble extends StatelessWidget {
     final maxWidth = MediaQuery.of(context).size.width * 0.75;
     final isStreaming = message.status == MessageStatus.streaming;
     final isError = message.status == MessageStatus.error;
+
+    final textColor = isError
+        ? AppColors.orange
+        : _isUser
+            ? Colors.white
+            : AppColors.textPrimary;
+
+    final content = isStreaming && message.content.isNotEmpty
+        ? '${message.content}▍'
+        : message.content.isEmpty && isStreaming
+            ? '▍'
+            : message.content;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -95,22 +105,81 @@ class ChatBubble extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(
-          isStreaming && message.content.isNotEmpty
-              ? '${message.content}▍'
-              : message.content.isEmpty && isStreaming
-                  ? '▍'
-                  : message.content,
-          style: TextStyle(
-            fontSize: 14,
-            height: 1.5,
-            color: isError
-                ? AppColors.orange
-                : _isUser
-                    ? Colors.white
-                    : AppColors.textPrimary,
+        child: _isUser
+            ? Text(content, style: TextStyle(fontSize: 14, height: 1.5, color: textColor))
+            : isError && message.content.contains('Key')
+                ? _buildApiKeyError(context, content, textColor)
+                : _buildMarkdownBody(content, textColor),
+      ),
+    );
+  }
+
+  Widget _buildApiKeyError(BuildContext context, String content, Color textColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(content, style: TextStyle(fontSize: 14, height: 1.5, color: textColor)),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => Navigator.pushNamed(context, '/settings'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.blue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              '前往设置 →',
+              style: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildMarkdownBody(String content, Color textColor) {
+    return MarkdownBody(
+      data: content,
+      shrinkWrap: true,
+      softLineBreak: true,
+      styleSheet: MarkdownStyleSheet(
+        p: TextStyle(fontSize: 14, height: 1.5, color: textColor),
+        strong: TextStyle(fontSize: 14, height: 1.5, color: textColor, fontWeight: FontWeight.w700),
+        em: TextStyle(fontSize: 14, height: 1.5, color: textColor, fontStyle: FontStyle.italic),
+        h1: TextStyle(fontSize: 18, height: 1.4, color: textColor, fontWeight: FontWeight.w700),
+        h2: TextStyle(fontSize: 16, height: 1.4, color: textColor, fontWeight: FontWeight.w700),
+        h3: TextStyle(fontSize: 15, height: 1.4, color: textColor, fontWeight: FontWeight.w600),
+        listBullet: TextStyle(fontSize: 14, height: 1.5, color: textColor),
+        code: TextStyle(
+          fontSize: 13,
+          color: AppColors.blue,
+          backgroundColor: AppColors.blueLight,
+          fontFamily: 'monospace',
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: AppColors.bgSection,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        codeblockPadding: const EdgeInsets.all(12),
+        blockquoteDecoration: BoxDecoration(
+          border: Border(left: BorderSide(color: AppColors.blue, width: 3)),
+        ),
+        blockquotePadding: const EdgeInsets.only(left: 12, top: 4, bottom: 4),
+        tableBorder: TableBorder.all(color: AppColors.divider, width: 1),
+        tableHead: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+        tableBody: TextStyle(fontSize: 13, color: textColor),
+        tableCellsPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        horizontalRuleDecoration: BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.divider, width: 1)),
+        ),
+        pPadding: EdgeInsets.zero,
+        h1Padding: const EdgeInsets.only(bottom: 4),
+        h2Padding: const EdgeInsets.only(bottom: 4),
+        h3Padding: const EdgeInsets.only(bottom: 2),
+        listIndent: 20,
+        listBulletPadding: const EdgeInsets.only(right: 4),
+        blockSpacing: 8,
       ),
     );
   }

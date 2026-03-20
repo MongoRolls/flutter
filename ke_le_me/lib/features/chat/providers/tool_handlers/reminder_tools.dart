@@ -29,9 +29,37 @@ List<FunctionDefinition> createReminderTools() {
         final datetimeStr = args['datetime'] as String;
         final repeat = args['repeat'] as String? ?? 'none';
 
-        final dt = DateTime.tryParse(datetimeStr);
+        var dt = DateTime.tryParse(datetimeStr);
         if (dt == null) {
           return jsonEncode({'error': '无效的时间格式'});
+        }
+
+        // 如果时间已过去，对 daily/weekly 自动推移到下一个有效时刻
+        final now = DateTime.now();
+        if (dt.isBefore(now)) {
+          if (repeat == 'daily') {
+            // 推移到今天的该时刻（若仍在过去，则推到明天）
+            dt = DateTime(now.year, now.month, now.day, dt.hour, dt.minute);
+            if (dt.isBefore(now)) {
+              dt = dt.add(const Duration(days: 1));
+            }
+          } else if (repeat == 'weekly') {
+            // 推移到本周同一天（若仍在过去，则推到下周）
+            final daysDiff = (dt.weekday - now.weekday) % 7;
+            dt = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              dt.hour,
+              dt.minute,
+            ).add(Duration(days: daysDiff));
+            if (dt.isBefore(now)) {
+              dt = dt.add(const Duration(days: 7));
+            }
+          } else {
+            // none：过去的时间直接返回错误，不调度
+            return jsonEncode({'error': '提醒时间不能是过去的时间'});
+          }
         }
 
         final notificationId = DateTime.now().millisecondsSinceEpoch % 100000;

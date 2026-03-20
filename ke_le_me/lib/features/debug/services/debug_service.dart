@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/models/user_profile.dart';
@@ -26,10 +27,10 @@ class TestResult {
   });
 
   String get statusIcon => switch (status) {
-        TestStatus.success => '✅',
-        TestStatus.failure => '❌',
-        TestStatus.info => 'ℹ️',
-      };
+    TestStatus.success => '✅',
+    TestStatus.failure => '❌',
+    TestStatus.info => 'ℹ️',
+  };
 
   String get formattedTime =>
       '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}';
@@ -64,7 +65,9 @@ class DebugService {
 
   Future<TestResult> showImmediateTestNotification(String style) async {
     try {
-      await NotificationService.instance.showTestNotification(reminderStyle: style);
+      await NotificationService.instance.showTestNotification(
+        reminderStyle: style,
+      );
       return TestResult(
         status: TestStatus.success,
         label: '触发即时通知',
@@ -151,8 +154,12 @@ class DebugService {
         'remainingMl': provider.remainingMl,
         'streakDays': provider.streakDays,
         'logsCount': provider.logs.length,
-        'logs': provider.logs.map((l) => {'time': l.time, 'ml': l.ml, 'icon': l.icon}).toList(),
-        'monthlyHits': provider.monthlyHits,
+        'logs': provider.logs
+            .map((l) => {'time': l.time, 'ml': l.ml, 'icon': l.icon})
+            .toList(),
+        'monthlyHits': provider.monthlyHits.map(
+          (k, v) => MapEntry(k.toString(), v),
+        ),
       };
       return TestResult(
         status: TestStatus.success,
@@ -196,7 +203,8 @@ class DebugService {
   Future<TestResult> resetTodayIntake(UserProvider provider) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final today = '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}';
+      final today =
+          '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}';
       await prefs.setInt('today_ml', 0);
       await prefs.setString('today_logs', '[]');
       await prefs.setString('today_date', today);
@@ -270,14 +278,49 @@ class DebugService {
     }
   }
 
-  Future<TestResult> clearAllData() async {
+  Future<TestResult> clearAllData(UserProvider provider) async {
     try {
+      // 1. 清空 SharedPreferences（用户档案、饮水记录、历史等）
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+
+      // 2. 清空 Hive：健康档案（memory_facts）
+      if (Hive.isBoxOpen('memory_facts')) {
+        await Hive.box('memory_facts').clear();
+      } else {
+        final box = await Hive.openBox('memory_facts');
+        await box.clear();
+      }
+
+      // 3. 清空 Hive：会话摘要（session_summaries）
+      if (Hive.isBoxOpen('session_summaries')) {
+        await Hive.box('session_summaries').clear();
+      } else {
+        final box = await Hive.openBox('session_summaries');
+        await box.clear();
+      }
+
+      // 4. 清空 Hive：自定义提醒（custom_reminders）
+      if (Hive.isBoxOpen('custom_reminders')) {
+        await Hive.box('custom_reminders').clear();
+      } else {
+        try {
+          final box = await Hive.openBox('custom_reminders');
+          await box.clear();
+        } catch (_) {}
+      }
+
+      // 5. 取消所有通知
+      await NotificationService.instance.cancelAll();
+
+      // 6. 重置 provider 内存状态
+      provider.updateProfile(UserProfile());
+
       return TestResult(
         status: TestStatus.success,
         label: '重置全部数据',
-        message: '所有数据已清除，即将返回引导页',
+        message: '所有数据已完全清除，即将返回引导页',
+        detail: '已清空：用户档案、饮水记录、历史归档、健康档案、会话摘要、自定义提醒、通知',
         timestamp: DateTime.now(),
       );
     } catch (e, st) {
@@ -294,13 +337,13 @@ class DebugService {
   // ============ Platform Info ============
 
   Map<String, String> get platformInfo => {
-        'platform': defaultTargetPlatform.name,
-        'isWeb': kIsWeb.toString(),
-        'isAndroid': (defaultTargetPlatform == TargetPlatform.android).toString(),
-        'isIOS': (defaultTargetPlatform == TargetPlatform.iOS).toString(),
-        'isMacOS': (defaultTargetPlatform == TargetPlatform.macOS).toString(),
-        'isWindows': (defaultTargetPlatform == TargetPlatform.windows).toString(),
-        'isLinux': (defaultTargetPlatform == TargetPlatform.linux).toString(),
-        'dartVersion': Platform.version,
-      };
+    'platform': defaultTargetPlatform.name,
+    'isWeb': kIsWeb.toString(),
+    'isAndroid': (defaultTargetPlatform == TargetPlatform.android).toString(),
+    'isIOS': (defaultTargetPlatform == TargetPlatform.iOS).toString(),
+    'isMacOS': (defaultTargetPlatform == TargetPlatform.macOS).toString(),
+    'isWindows': (defaultTargetPlatform == TargetPlatform.windows).toString(),
+    'isLinux': (defaultTargetPlatform == TargetPlatform.linux).toString(),
+    'dartVersion': Platform.version,
+  };
 }

@@ -92,7 +92,11 @@ class WeatherGoalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAiSuggestion(int dynamicGoal, int currentGoal, dynamic prediction) {
+  Widget _buildAiSuggestion(
+    int dynamicGoal,
+    int currentGoal,
+    dynamic prediction,
+  ) {
     final isHigher = dynamicGoal > currentGoal;
     return Container(
       padding: const EdgeInsets.all(12),
@@ -125,11 +129,15 @@ class WeatherGoalCard extends StatelessWidget {
               ),
             ],
           ),
-          if (prediction != null && (prediction.explanation as String).isNotEmpty) ...[
+          if (prediction != null &&
+              (prediction.explanation as String).isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               prediction.explanation as String,
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
           const SizedBox(height: 8),
@@ -151,6 +159,9 @@ class WeatherGoalCard extends StatelessWidget {
   }
 
   Widget _buildNoWeather() {
+    // dynamicGoalMl != null 表示天气加载已完成（即便失败也会回退设置该值）
+    // 此时 weatherData 仍为 null 说明获取天气失败，显示失败提示而非永久转圈
+    final isLoadFailed = userProvider.dynamicGoalMl != null;
     return GlassCard(
       child: Row(
         children: [
@@ -163,20 +174,21 @@ class WeatherGoalCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              '天气数据加载中...',
-              style: TextStyle(fontSize: 13, color: AppColors.textHint),
+              isLoadFailed ? '暂无天气数据（位置权限未开启或网络不可用）' : '天气数据加载中...',
+              style: const TextStyle(fontSize: 13, color: AppColors.textHint),
             ),
           ),
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppColors.blue,
+          if (!isLoadFailed)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.blue,
+              ),
             ),
-          ),
         ],
       ),
     );

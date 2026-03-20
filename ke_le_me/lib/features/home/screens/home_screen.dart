@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/models/drink_log.dart';
+import '../../../core/models/drink_preset.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../common/widgets/glass_card.dart';
@@ -54,14 +55,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _celebrateAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 1.15, end: 0.95), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 40),
-    ]).animate(CurvedAnimation(
-      parent: _celebrateController,
-      curve: Curves.easeInOut,
-    ));
+    _celebrateAnim =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 1.15, end: 0.95), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 40),
+        ]).animate(
+          CurvedAnimation(
+            parent: _celebrateController,
+            curve: Curves.easeInOut,
+          ),
+        );
 
     _ringAnimController.forward();
     _entranceController.forward();
@@ -80,7 +84,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _onLogoTap() {
     final now = DateTime.now();
-    if (_lastLogoTap == null || now.difference(_lastLogoTap!) > const Duration(seconds: 2)) {
+    if (_lastLogoTap == null ||
+        now.difference(_lastLogoTap!) > const Duration(seconds: 2)) {
       _logoTapCount = 1;
     } else {
       _logoTapCount++;
@@ -96,12 +101,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('再点 $remaining 次进入调试模式',
-              style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
+          content: Text(
+            '再点 $remaining 次进入调试模式',
+            style: const TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
           backgroundColor: AppColors.bgCard,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(milliseconds: 800),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           elevation: 4,
         ),
       );
@@ -121,26 +130,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgCard,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => _QuickDrinkSheet(
-        onDrink: (ml) {
-          _p.addDrink(ml, desc: '快速补水');
+        presets: _p.drinkPresets,
+        userProvider: _p,
+        onDrink: (preset) {
+          _p.addDrink(preset.ml, type: preset.icon, desc: preset.name);
           Navigator.pop(ctx);
           _ringAnimController.forward(from: 0);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Text('💧 '),
-                  Text('已记录 ${ml}ml，继续加油！',
-                      style: const TextStyle(color: AppColors.textPrimary)),
+                  Text('${preset.icon} '),
+                  Text(
+                    '已记录 ${preset.ml}ml，继续加油！',
+                    style: const TextStyle(color: AppColors.textPrimary),
+                  ),
                 ],
               ),
               backgroundColor: AppColors.bgCard,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 4,
             ),
           );
@@ -186,7 +202,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: const BoxDecoration(
         color: AppColors.bgCard,
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -200,9 +222,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: AppColors.blueLight,
               ),
               child: Center(
-                child: Text('渴',
-                    style: GoogleFonts.notoSansSc(
-                        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.blue)),
+                child: Text(
+                  '渴',
+                  style: GoogleFonts.notoSansSc(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.blue,
+                  ),
+                ),
               ),
             ),
           ),
@@ -210,19 +237,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('渴了么',
-                  style: GoogleFonts.notoSansSc(
-                      fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              Text('KE LE ME',
-                  style: GoogleFonts.spaceMono(fontSize: 9, color: AppColors.textHint)),
+              Text(
+                '渴了么',
+                style: GoogleFonts.notoSansSc(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Text(
+                'KE LE ME',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 9,
+                  color: AppColors.textHint,
+                ),
+              ),
             ],
           ),
           const Spacer(),
-          _headerBtn(Icons.smart_toy_outlined, () => Navigator.pushNamed(context, '/chat')),
+          _headerBtn(
+            Icons.smart_toy_outlined,
+            () => Navigator.pushNamed(context, '/chat'),
+          ),
           const SizedBox(width: 8),
           _headerBtn(Icons.notifications_outlined, () {}),
           const SizedBox(width: 8),
-          _headerBtn(Icons.settings_outlined, () => Navigator.pushNamed(context, '/settings')),
+          _headerBtn(
+            Icons.settings_outlined,
+            () => Navigator.pushNamed(context, '/settings'),
+          ),
         ],
       ),
     );
@@ -247,10 +290,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final pct = (_p.progress * 100).round();
     return AnimatedBuilder(
       animation: _celebrateAnim,
-      builder: (_, child) => Transform.scale(
-        scale: _celebrateAnim.value,
-        child: child,
-      ),
+      builder: (_, child) =>
+          Transform.scale(scale: _celebrateAnim.value, child: child),
       child: GlassCard(
         padding: const EdgeInsets.all(22),
         child: Column(
@@ -262,27 +303,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('👋 $greeting，$name',
-                          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(
+                        '👋 $greeting，$name',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         '${now.year}年${now.month}月${now.day}日',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textHint,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, anim) => ScaleTransition(
-                    scale: anim,
-                    child: child,
-                  ),
+                  transitionBuilder: (child, anim) =>
+                      ScaleTransition(scale: anim, child: child),
                   child: Container(
                     key: ValueKey(pct >= 100),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: pct >= 100 ? AppColors.greenLight : AppColors.blueLight,
+                      color: pct >= 100
+                          ? AppColors.greenLight
+                          : AppColors.blueLight,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -321,13 +373,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         builder: (_, value, _) => Text(
                           '还差 ${value}ml',
                           style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '目标 ${_p.profile.dailyGoalMl}ml',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textHint,
+                        ),
                       ),
                       const SizedBox(height: 14),
                       SizedBox(
@@ -341,8 +399,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text('💧 ', style: TextStyle(fontSize: 14)),
-                              Text('喝水打卡',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                              Text(
+                                '喝水打卡',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -363,9 +426,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
-          _miniStatCard('${_p.logs.length}', '今日打卡', AppColors.blue, AppColors.blueLight),
+          _miniStatCard(
+            '${_p.logs.length}',
+            '今日打卡',
+            AppColors.blue,
+            AppColors.blueLight,
+          ),
           const SizedBox(width: 10),
-          _miniStatCard('${_p.streakDays}', '🔥连续天数', AppColors.orange, AppColors.orangeLight),
+          _miniStatCard(
+            '${_p.streakDays}',
+            '🔥连续天数',
+            AppColors.orange,
+            AppColors.orangeLight,
+          ),
           const SizedBox(width: 10),
           _miniStatCardMl(_p.todayMl),
         ],
@@ -380,7 +453,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: AppColors.bgCard,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -392,14 +471,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Text(
                   num,
                   style: GoogleFonts.spaceMono(
-                      fontSize: 15, fontWeight: FontWeight.w700, color: color),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 6),
-            Text(label,
-                style: const TextStyle(fontSize: 10, color: AppColors.textHint),
-                textAlign: TextAlign.center),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10, color: AppColors.textHint),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -413,7 +497,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: AppColors.bgCard,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -424,21 +514,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Text(
                   '$ml',
                   style: GoogleFonts.spaceMono(
-                      fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.blue),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.blue,
+                  ),
                 ),
                 const SizedBox(width: 2),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2),
-                  child: Text('ml',
-                      style: GoogleFonts.spaceMono(
-                          fontSize: 10, fontWeight: FontWeight.w400, color: AppColors.textHint)),
+                  child: Text(
+                    'ml',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textHint,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            const Text('已喝水量',
-                style: TextStyle(fontSize: 10, color: AppColors.textHint),
-                textAlign: TextAlign.center),
+            const Text(
+              '已喝水量',
+              style: TextStyle(fontSize: 10, color: AppColors.textHint),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -454,26 +554,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Row(
             children: [
               Container(
-                width: 4, height: 16,
+                width: 4,
+                height: 16,
                 decoration: BoxDecoration(
                   color: AppColors.blue,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 8),
-              const Text('今日饮水记录',
-                  style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              const Text(
+                '今日饮水记录',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               const Spacer(),
               if (logs.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.blueLight,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text('共 ${_p.todayMl}ml',
-                      style: const TextStyle(fontSize: 10, color: AppColors.blue, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    '共 ${_p.todayMl}ml',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.blue,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -485,16 +600,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               final log = logs[index];
               final intervalStart = (index * 0.08).clamp(0.0, 0.7);
               final intervalEnd = (intervalStart + 0.3).clamp(0.0, 1.0);
-              final slideAnim = Tween<Offset>(
-                begin: const Offset(0.3, 0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: _entranceController,
-                curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOutCubic),
-              ));
+              final slideAnim =
+                  Tween<Offset>(
+                    begin: const Offset(0.3, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _entranceController,
+                      curve: Interval(
+                        intervalStart,
+                        intervalEnd,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                  );
               final fadeAnim = CurvedAnimation(
                 parent: _entranceController,
-                curve: Interval(intervalStart, intervalEnd, curve: Curves.easeOut),
+                curve: Interval(
+                  intervalStart,
+                  intervalEnd,
+                  curve: Curves.easeOut,
+                ),
               );
               return FadeTransition(
                 opacity: fadeAnim,
@@ -529,7 +655,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const SizedBox(height: 12),
           const Text(
             '今天还没有喝水记录',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -549,8 +679,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('💧 ', style: TextStyle(fontSize: 13)),
-                  Text('立即打卡',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text(
+                    '立即打卡',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -567,28 +703,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         color: isLatest ? AppColors.blueLight : AppColors.bgSection,
         borderRadius: BorderRadius.circular(10),
-        border: isLatest ? Border.all(color: AppColors.blue.withValues(alpha: 0.25)) : null,
+        border: isLatest
+            ? Border.all(color: AppColors.blue.withValues(alpha: 0.25))
+            : null,
       ),
       child: Row(
         children: [
           SizedBox(
             width: 38,
-            child: Text(log.time,
-                style: GoogleFonts.spaceMono(fontSize: 11, color: AppColors.textHint)),
+            child: Text(
+              log.time,
+              style: GoogleFonts.spaceMono(
+                fontSize: 11,
+                color: AppColors.textHint,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Text(log.icon, style: const TextStyle(fontSize: 18)),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(log.description,
-                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            child: Text(
+              log.description,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ),
-          Text('+${log.ml}ml',
-              style: AppTheme.monoStyle.copyWith(
-                fontSize: 12,
-                color: isLatest ? AppColors.blue : AppColors.textSecondary,
-                fontWeight: isLatest ? FontWeight.w700 : FontWeight.w400,
-              )),
+          Text(
+            '+${log.ml}ml',
+            style: AppTheme.monoStyle.copyWith(
+              fontSize: 12,
+              color: isLatest ? AppColors.blue : AppColors.textSecondary,
+              fontWeight: isLatest ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
           const SizedBox(width: 8),
           if (isLatest)
             Container(
@@ -597,8 +747,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: AppColors.blue,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('最新',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+              child: const Text(
+                '最新',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
             )
           else
             Container(
@@ -607,8 +763,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: AppColors.greenLight,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('✓',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.green)),
+              child: const Text(
+                '✓',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.green,
+                ),
+              ),
             ),
         ],
       ),
@@ -633,17 +795,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Row(
             children: [
               Container(
-                width: 4, height: 16,
+                width: 4,
+                height: 16,
                 decoration: BoxDecoration(
-                  color: AppColors.blue, borderRadius: BorderRadius.circular(2)),
+                  color: AppColors.blue,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               const SizedBox(width: 8),
-              const Text('本月打卡',
-                  style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              const Text(
+                '本月打卡',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               const Spacer(),
-              Text('🔥 连续 ${_p.streakDays} 天',
-                  style: const TextStyle(fontSize: 11, color: AppColors.orange, fontWeight: FontWeight.w600)),
+              Text(
+                '🔥 连续 ${_p.streakDays} 天',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.orange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -661,7 +837,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 deco = BoxDecoration(
                   color: AppColors.blue,
                   borderRadius: BorderRadius.circular(8),
-                  boxShadow: [BoxShadow(color: AppColors.blue.withValues(alpha: 0.4), blurRadius: 8)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.blue.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                    ),
+                  ],
                 );
                 textColor = Colors.white;
               } else if (d < today && achieved) {
@@ -686,14 +867,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               }
 
               return Container(
-                width: 34, height: 34,
+                width: 34,
+                height: 34,
                 decoration: deco,
                 child: Center(
                   child: Text(
                     '$d',
                     style: GoogleFonts.spaceMono(
                       fontSize: 11,
-                      fontWeight: d == today ? FontWeight.w700 : FontWeight.w400,
+                      fontWeight: d == today
+                          ? FontWeight.w700
+                          : FontWeight.w400,
                       color: textColor,
                     ),
                   ),
@@ -708,8 +892,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               const SizedBox(width: 12),
               _legendDot(AppColors.bgSection, '未达标'),
               const Spacer(),
-              Text('本月 $achievedDays 天达标',
-                  style: const TextStyle(fontSize: 10, color: AppColors.textHint)),
+              Text(
+                '本月 $achievedDays 天达标',
+                style: const TextStyle(fontSize: 10, color: AppColors.textHint),
+              ),
             ],
           ),
         ],
@@ -722,81 +908,524 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10, height: 10,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
         ),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textHint)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: AppColors.textHint),
+        ),
       ],
     );
   }
-
 }
 
-class _QuickDrinkSheet extends StatelessWidget {
-  final ValueChanged<int> onDrink;
+class _QuickDrinkSheet extends StatefulWidget {
+  final List<DrinkPreset> presets;
+  final UserProvider userProvider;
+  final ValueChanged<DrinkPreset> onDrink;
 
-  const _QuickDrinkSheet({required this.onDrink});
+  const _QuickDrinkSheet({
+    required this.presets,
+    required this.userProvider,
+    required this.onDrink,
+  });
+
+  @override
+  State<_QuickDrinkSheet> createState() => _QuickDrinkSheetState();
+}
+
+class _QuickDrinkSheetState extends State<_QuickDrinkSheet> {
+  int _selectedIndex = -1;
 
   @override
   Widget build(BuildContext context) {
+    final presets = widget.presets;
+    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + bottomPad),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 36, height: 4,
+            width: 36,
+            height: 4,
             decoration: BoxDecoration(
-              color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+              color: AppColors.divider,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const SizedBox(height: 18),
-          const Text('💧 快速记录饮水',
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-          const SizedBox(height: 6),
-          const Text('选择饮水量', style: TextStyle(fontSize: 12, color: AppColors.textHint)),
           const SizedBox(height: 16),
           Row(
-            children: [150, 200, 250, 350, 500].map((ml) {
-              final isDefault = ml == 250;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: GestureDetector(
-                    onTap: () => onDrink(ml),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: isDefault ? AppColors.blue : AppColors.blueLight,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${ml}ml',
-                          style: GoogleFonts.spaceMono(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isDefault ? Colors.white : AppColors.blue,
-                          ),
-                        ),
-                      ),
-                    ),
+            children: [
+              const Expanded(
+                child: Text(
+                  '💧 快速记录饮水',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+              GestureDetector(
+                onTap: () => _showManagePresetsSheet(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.blueLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 14,
+                        color: AppColors.blue,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '管理杯子',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.blue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 4),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '选择你的水杯，点击即可记录',
+              style: TextStyle(fontSize: 12, color: AppColors.textHint),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildPresetsGrid(presets),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => onDrink(250),
-              child: const Text('✓ 喝了 250ml'),
+              onPressed: _selectedIndex >= 0 && _selectedIndex < presets.length
+                  ? () => widget.onDrink(presets[_selectedIndex])
+                  : null,
+              child: Text(
+                _selectedIndex >= 0 && _selectedIndex < presets.length
+                    ? '✓ 喝了 ${presets[_selectedIndex].ml}ml ${presets[_selectedIndex].name}'
+                    : '请选择水杯',
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPresetsGrid(List<DrinkPreset> presets) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const crossAxisCount = 3;
+        const spacing = 10.0;
+        final itemWidth =
+            (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+            crossAxisCount;
+        const itemHeight = 96.0;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: List.generate(presets.length, (i) {
+            final preset = presets[i];
+            final isSelected = _selectedIndex == i;
+
+            return GestureDetector(
+              onTap: () {
+                setState(() => _selectedIndex = i);
+                widget.onDrink(preset);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: itemWidth,
+                height: itemHeight,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.blue : AppColors.blueLight,
+                  borderRadius: BorderRadius.circular(14),
+                  border: isSelected
+                      ? Border.all(color: AppColors.blueDark, width: 2)
+                      : Border.all(color: AppColors.blueBorder, width: 1),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.blue.withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(preset.icon, style: const TextStyle(fontSize: 28)),
+                    const SizedBox(height: 4),
+                    Text(
+                      preset.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${preset.ml}ml',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.9)
+                            : AppColors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  void _showManagePresetsSheet(BuildContext context) {
+    Navigator.pop(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgCard,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _ManagePresetsSheet(userProvider: widget.userProvider),
+    );
+  }
+}
+
+// ── 杯子管理面板 ──
+
+class _ManagePresetsSheet extends StatefulWidget {
+  final UserProvider userProvider;
+  const _ManagePresetsSheet({required this.userProvider});
+
+  @override
+  State<_ManagePresetsSheet> createState() => _ManagePresetsSheetState();
+}
+
+class _ManagePresetsSheetState extends State<_ManagePresetsSheet> {
+  @override
+  Widget build(BuildContext context) {
+    final presets = widget.userProvider.drinkPresets;
+    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + bottomPad),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.divider,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  '🛠 管理我的水杯',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  await widget.userProvider.resetDrinkPresets();
+                  setState(() {});
+                },
+                child: const Text(
+                  '恢复默认',
+                  style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '长按可删除，点击可编辑',
+              style: TextStyle(fontSize: 12, color: AppColors.textHint),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.45,
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: presets.length,
+              separatorBuilder: (_, _) =>
+                  const Divider(height: 1, color: AppColors.divider),
+              itemBuilder: (ctx, i) {
+                final p = presets[i];
+                return Dismissible(
+                  key: ValueKey('preset_${i}_${p.name}_${p.ml}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    color: AppColors.red.withValues(alpha: 0.1),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: AppColors.red,
+                    ),
+                  ),
+                  confirmDismiss: (_) async {
+                    if (presets.length <= 1) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('至少保留一个杯子')));
+                      return false;
+                    }
+                    return true;
+                  },
+                  onDismissed: (_) async {
+                    await widget.userProvider.removeDrinkPreset(i);
+                    setState(() {});
+                  },
+                  child: ListTile(
+                    leading: Text(p.icon, style: const TextStyle(fontSize: 28)),
+                    title: Text(
+                      p.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    trailing: Text(
+                      '${p.ml}ml',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.blue,
+                      ),
+                    ),
+                    onTap: () =>
+                        _showEditPresetDialog(context, index: i, preset: p),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showEditPresetDialog(context),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('添加新杯子'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.blue,
+                side: const BorderSide(color: AppColors.blueBorder),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditPresetDialog(
+    BuildContext context, {
+    int? index,
+    DrinkPreset? preset,
+  }) {
+    final isEditing = preset != null;
+    final nameCtrl = TextEditingController(text: preset?.name ?? '');
+    final mlCtrl = TextEditingController(text: preset?.ml.toString() ?? '');
+    String selectedIcon = preset?.icon ?? '💧';
+
+    const iconOptions = [
+      '💧',
+      '🥛',
+      '🥤',
+      '🍵',
+      '☕',
+      '🫗',
+      '🧃',
+      '🍶',
+      '🥣',
+      '🧊',
+      '🍺',
+      '🫖',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.bgCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          // Android 键盘弹出时，insetPadding 确保对话框不会被遮挡
+          insetPadding: EdgeInsets.fromLTRB(
+            20,
+            24,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          title: Text(
+            isEditing ? '编辑杯子' : '添加新杯子',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '选择图标',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: iconOptions.map((icon) {
+                    final isActive = icon == selectedIcon;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() => selectedIcon = icon),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? AppColors.blueLight
+                              : AppColors.bgSection,
+                          borderRadius: BorderRadius.circular(10),
+                          border: isActive
+                              ? Border.all(color: AppColors.blue, width: 2)
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            icon,
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: '名称',
+                    hintText: '例如：我的保温杯',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: mlCtrl,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    labelText: '容量 (ml)',
+                    hintText: '例如：350',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                final ml = int.tryParse(mlCtrl.text.trim());
+                if (name.isEmpty || ml == null || ml <= 0) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('请填写名称和有效容量')));
+                  return;
+                }
+                final newPreset = DrinkPreset(
+                  icon: selectedIcon,
+                  name: name,
+                  ml: ml,
+                );
+                if (isEditing && index != null) {
+                  widget.userProvider.updateDrinkPreset(index, newPreset);
+                } else {
+                  widget.userProvider.addDrinkPreset(newPreset);
+                }
+                Navigator.pop(ctx);
+                setState(() {});
+              },
+              child: Text(isEditing ? '保存' : '添加'),
+            ),
+          ],
+        ),
       ),
     );
   }

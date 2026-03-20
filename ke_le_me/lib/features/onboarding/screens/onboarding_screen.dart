@@ -67,7 +67,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finishOnboarding() async {
     final profile = UserProfile(
-      nickname: _nicknameController.text.isEmpty ? '用户' : _nicknameController.text,
+      nickname: _nicknameController.text.isEmpty
+          ? '用户'
+          : _nicknameController.text,
       gender: _gender,
       activityLevel: _activityLevel,
       weight: _weight,
@@ -141,27 +143,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
           Center(
             child: Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.blueLight,
-                boxShadow: [BoxShadow(color: AppColors.blue.withValues(alpha: 0.2), blurRadius: 20)],
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.blue.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                  ),
+                ],
               ),
               child: Center(
-                child: Text('渴',
-                    style: GoogleFonts.notoSansSc(
-                        fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.blue)),
+                child: Text(
+                  '渴',
+                  style: GoogleFonts.notoSansSc(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.blue,
+                  ),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
           Center(
-            child: Text('欢迎使用渴了么',
-                style: Theme.of(context).textTheme.headlineMedium),
+            child: Text(
+              '欢迎使用渴了么',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
           ),
           Center(
-            child: Text('先了解一下你，为你定制健康计划',
-                style: Theme.of(context).textTheme.bodySmall),
+            child: Text(
+              '先了解一下你，为你定制健康计划',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
           const SizedBox(height: 28),
 
@@ -189,7 +206,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppColors.blue, width: 2),
+                      borderSide: const BorderSide(
+                        color: AppColors.blue,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -197,7 +217,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 20),
                 _label('性别'),
                 const SizedBox(height: 8),
-                _chipRow(['男', '女', '其他'], _gender, (v) => setState(() => _gender = v)),
+                _chipRow(
+                  ['男', '女', '其他'],
+                  _gender,
+                  (v) => setState(() => _gender = v),
+                ),
 
                 const SizedBox(height: 20),
                 _label('每周运动量'),
@@ -213,26 +237,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
+                    const Text(
+                      '40',
+                      style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                    ),
                     Expanded(
                       child: Slider(
                         value: _weight,
                         min: 40,
-                        max: 120,
-                        divisions: 80,
+                        max: 150,
+                        divisions: 110,
                         onChanged: (v) => setState(() {
                           _weight = v;
                           _goalMl = (v * 35).round();
                         }),
                       ),
                     ),
-                    SizedBox(
-                      width: 60,
-                      child: Text('${_weight.round()} kg',
-                          textAlign: TextAlign.right,
-                          style: AppTheme.monoStyle.copyWith(fontSize: 14)),
+                    const Text(
+                      '150',
+                      style: TextStyle(fontSize: 11, color: AppColors.textHint),
                     ),
                   ],
                 ),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.blueLight,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '${_weight.round()} kg',
+                      style: AppTheme.monoStyle.copyWith(
+                        fontSize: 14,
+                        color: AppColors.blue,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
               ],
             ),
           ),
@@ -260,25 +306,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 16),
           Text('设定每日目标', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 4),
-          Text('根据你的体重推荐 ${(_weight * 35).round()}ml',
-              style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            '根据你的体重推荐 ${(_weight * 35).round()}ml',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 28),
 
           GlassCard(
             child: Column(
               children: [
                 SizedBox(
-                  width: 160, height: 160,
+                  width: 160,
+                  height: 160,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       SizedBox(
-                        width: 160, height: 160,
+                        width: 160,
+                        height: 160,
                         child: CircularProgressIndicator(
                           value: pct,
                           strokeWidth: 12,
                           backgroundColor: AppColors.blueLight,
-                          valueColor: const AlwaysStoppedAnimation(AppColors.blue),
+                          valueColor: const AlwaysStoppedAnimation(
+                            AppColors.blue,
+                          ),
                           strokeCap: StrokeCap.round,
                         ),
                       ),
@@ -289,7 +341,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             '$_goalMl',
                             style: AppTheme.monoStyle.copyWith(fontSize: 32),
                           ),
-                          const Text('ml', style: TextStyle(color: AppColors.textHint, fontSize: 12)),
+                          const Text(
+                            'ml',
+                            style: TextStyle(
+                              color: AppColors.textHint,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -298,21 +356,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    const Text('1500', style: TextStyle(fontSize: 11, color: AppColors.textHint)),
+                    const Text(
+                      '1500',
+                      style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                    ),
                     Expanded(
                       child: Slider(
                         value: _goalMl.toDouble(),
                         min: 1500,
                         max: 4000,
-                        divisions: 25,
+                        divisions: 50,
                         onChanged: (v) => setState(() => _goalMl = v.round()),
                       ),
                     ),
-                    const Text('4000', style: TextStyle(fontSize: 11, color: AppColors.textHint)),
+                    const Text(
+                      '4000',
+                      style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                    ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.blueLight,
                     borderRadius: BorderRadius.circular(20),
@@ -329,7 +396,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(onPressed: _nextStep, child: const Text('继续')),
+            child: ElevatedButton(
+              onPressed: _nextStep,
+              child: const Text('继续'),
+            ),
           ),
         ],
       ),
@@ -354,12 +424,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 _label('起床时间'),
                 const SizedBox(height: 8),
-                _timePickerButton(_wakeTime, (t) => setState(() => _wakeTime = t)),
+                _timePickerButton(
+                  _wakeTime,
+                  (t) => setState(() => _wakeTime = t),
+                ),
 
                 const SizedBox(height: 20),
                 _label('就寝时间'),
                 const SizedBox(height: 8),
-                _timePickerButton(_bedTime, (t) => setState(() => _bedTime = t)),
+                _timePickerButton(
+                  _bedTime,
+                  (t) => setState(() => _bedTime = t),
+                ),
 
                 const SizedBox(height: 20),
                 _label('提醒间隔'),
@@ -367,7 +443,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 _chipRow(
                   ['30 分钟', '1 小时', '1.5 小时', '2 小时'],
                   _intervalLabel(_reminderInterval),
-                  (v) => setState(() => _reminderInterval = _intervalFromLabel(v)),
+                  (v) =>
+                      setState(() => _reminderInterval = _intervalFromLabel(v)),
                 ),
               ],
             ),
@@ -377,21 +454,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(color: AppColors.blueLight, shape: BoxShape.circle),
-                  child: const Center(child: Text('⏰', style: TextStyle(fontSize: 20))),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.blueLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Text('⏰', style: TextStyle(fontSize: 20)),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('提醒预览',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                      const Text(
+                        '提醒预览',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         '$_wakeTime ~ $_bedTime · 每${_intervalLabel(_reminderInterval)}一次',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textHint),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textHint,
+                        ),
                       ),
                     ],
                   ),
@@ -402,7 +493,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(onPressed: _nextStep, child: const Text('完成设置')),
+            child: ElevatedButton(
+              onPressed: _nextStep,
+              child: const Text('完成设置'),
+            ),
           ),
         ],
       ),
@@ -418,13 +512,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           const Spacer(),
           Container(
-            width: 100, height: 100,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.blueLight,
-              boxShadow: [BoxShadow(color: AppColors.blue.withValues(alpha: 0.2), blurRadius: 30)],
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.blue.withValues(alpha: 0.2),
+                  blurRadius: 30,
+                ),
+              ],
             ),
-            child: const Center(child: Text('🔔', style: TextStyle(fontSize: 44))),
+            child: const Center(
+              child: Text('🔔', style: TextStyle(fontSize: 44)),
+            ),
           ),
           const SizedBox(height: 28),
           Text('开启通知', style: Theme.of(context).textTheme.headlineMedium),
@@ -432,7 +534,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const Text(
             '为了在最佳时机提醒你喝水\n需要开启通知权限',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textHint, fontSize: 14, height: 1.7),
+            style: TextStyle(
+              color: AppColors.textHint,
+              fontSize: 14,
+              height: 1.7,
+            ),
           ),
           const SizedBox(height: 12),
           Container(
@@ -446,8 +552,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Icon(Icons.check_circle, color: AppColors.blue, size: 18),
                 SizedBox(width: 8),
                 Expanded(
-                  child: Text('到点自动推送，不错过每次补水',
-                      style: TextStyle(fontSize: 12, color: AppColors.blue)),
+                  child: Text(
+                    '到点自动推送，不错过每次补水',
+                    style: TextStyle(fontSize: 12, color: AppColors.blue),
+                  ),
                 ),
               ],
             ),
@@ -463,7 +571,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 12),
           TextButton(
             onPressed: _finishOnboarding,
-            child: const Text('稍后再说', style: TextStyle(color: AppColors.textHint)),
+            child: const Text(
+              '稍后再说',
+              style: TextStyle(color: AppColors.textHint),
+            ),
           ),
           const SizedBox(height: 24),
         ],
@@ -473,16 +584,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // ── Helpers ──
   Widget _label(String text) => Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12, fontWeight: FontWeight.w600,
-          color: AppColors.textSecondary, letterSpacing: 0.5,
-        ),
-      );
+    text,
+    style: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: AppColors.textSecondary,
+      letterSpacing: 0.5,
+    ),
+  );
 
-  Widget _chipRow(List<String> options, String selected, ValueChanged<String> onSelect) {
+  Widget _chipRow(
+    List<String> options,
+    String selected,
+    ValueChanged<String> onSelect,
+  ) {
     return Wrap(
-      spacing: 8, runSpacing: 8,
+      spacing: 8,
+      runSpacing: 8,
       children: options.map((opt) {
         final isSelected = opt == selected;
         return GestureDetector(
@@ -517,10 +635,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         final parts = time.split(':');
         final picked = await showTimePicker(
           context: context,
-          initialTime: TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
+          initialTime: TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          ),
+          initialEntryMode: TimePickerEntryMode.inputOnly,
           builder: (context, child) => Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(primary: AppColors.blue),
+              colorScheme: const ColorScheme.dark(
+                primary: AppColors.blue,
+                onPrimary: Colors.white,
+                surface: AppColors.bgSection,
+                onSurface: AppColors.textPrimary,
+              ),
+              timePickerTheme: TimePickerThemeData(
+                backgroundColor: AppColors.bgCard,
+                hourMinuteShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                dayPeriodBorderSide: const BorderSide(color: AppColors.divider),
+                inputDecorationTheme: InputDecorationTheme(
+                  filled: true,
+                  fillColor: AppColors.bgSection,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.divider),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AppColors.blue,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
             ),
             child: child!,
           ),

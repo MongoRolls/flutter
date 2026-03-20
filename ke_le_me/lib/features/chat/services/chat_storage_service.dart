@@ -13,17 +13,43 @@ class ChatStorageService {
   static const _maxStoredMessages = 50;
   static const _maxSummaries = 10;
 
-  /// 保存当前对话消息（只保留最近 N 条的 user + assistant）
+  /// 保存当前对话消息（只保留最近 N 条的 user / assistant / tool）
   Future<void> saveMessages(List<ChatMessage> messages) async {
     final prefs = await SharedPreferences.getInstance();
+    // Include tool messages so assistant+tool_calls always has paired results
     final filtered = messages
         .where((m) =>
-            m.role == MessageRole.user || m.role == MessageRole.assistant)
+            m.role == MessageRole.user ||
+            m.role == MessageRole.assistant ||
+            m.role == MessageRole.tool)
+        .where((m) => m.status != MessageStatus.streaming)
         .toList();
     final trimmed = filtered.length > _maxStoredMessages
         ? filtered.sublist(filtered.length - _maxStoredMessages)
         : filtered;
-    final json = jsonEncode(trimmed.map((m) => m.toStorageMap()).toList());
+    // Ensure we never start with an orphaned tool message or an
+    // assistant+tool_calls that has no following tool result.
+    var startIdx = 0;
+    while (startIdx < trimmed.length) {
+      final msg = trimmed[startIdx];
+      if (msg.role == MessageRole.tool) {
+        startIdx++;
+      } else if (msg.role == MessageRole.assistant &&
+          msg.toolCalls != null &&
+          msg.toolCalls!.isNotEmpty) {
+        final nextIdx = startIdx + 1;
+        if (nextIdx >= trimmed.length ||
+            trimmed[nextIdx].role != MessageRole.tool) {
+          startIdx++;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    final clean = trimmed.sublist(startIdx);
+    final json = jsonEncode(clean.map((m) => m.toStorageMap()).toList());
     await prefs.setString(_messagesKey, json);
   }
 
