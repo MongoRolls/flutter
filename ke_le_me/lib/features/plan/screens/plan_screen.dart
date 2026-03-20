@@ -259,6 +259,7 @@ class _PlanScreenState extends State<PlanScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: initial,
+      initialEntryMode: TimePickerEntryMode.input,
     );
 
     if (picked != null) {

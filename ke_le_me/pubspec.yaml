@@ -1,7 +1,7 @@
 name: ke_le_me
 description: "渴了么 - AI 智能喝水提醒"
-publish_to: 'none'
-version: 1.0.0+1
+publish_to: "none"
+version: 2.5.1+1
 
 environment:
   sdk: ^3.11.1

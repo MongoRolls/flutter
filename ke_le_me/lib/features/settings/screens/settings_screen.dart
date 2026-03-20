@@ -567,6 +567,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   hour: int.parse(parts[0]),
                   minute: int.parse(parts[1]),
                 ),
+                initialEntryMode: TimePickerEntryMode.input,
                 builder: (context, child) => Theme(
                   data: Theme.of(context).copyWith(
                     colorScheme: const ColorScheme.light(

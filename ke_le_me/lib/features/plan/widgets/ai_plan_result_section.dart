@@ -29,10 +29,9 @@ class AiPlanResultSection extends StatelessWidget {
         _buildSummaryCard(context, plan),
         ActionRow(planProvider: planProvider),
         const SizedBox(height: 4),
-        SlotTimeline(
-          planProvider: planProvider,
-          plan: plan,
-        ),
+        SlotTimeline(planProvider: planProvider, plan: plan),
+        const SizedBox(height: 12),
+        _buildRegenerateButton(context),
       ],
     );
   }
@@ -45,10 +44,7 @@ class AiPlanResultSection extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.blueLight,
                   borderRadius: BorderRadius.circular(10),
@@ -70,23 +66,35 @@ class AiPlanResultSection extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: () {
-                  planProvider.reset();
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(6),
+              if (plan.cityName != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.bgSection,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
-                    Icons.refresh,
-                    size: 16,
-                    color: AppColors.textHint,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 11,
+                        color: AppColors.textHint,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        plan.cityName!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -103,10 +111,7 @@ class AiPlanResultSection extends StatelessWidget {
             children: [
               const Text(
                 '建议总量 ',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textHint,
-                ),
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
               ),
               Text(
                 '${plan.totalMl}ml',
@@ -116,16 +121,66 @@ class AiPlanResultSection extends StatelessWidget {
                   color: AppColors.blue,
                 ),
               ),
-              const Spacer(),
-              if (plan.cityName != null)
-                Text(
-                  '📍 ${plan.cityName}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textHint,
-                  ),
-                ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 重新生成按钮（醒目样式）
+  Widget _buildRegenerateButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _confirmRegenerate(context),
+        icon: const Icon(Icons.refresh, size: 18),
+        label: const Text(
+          '重新生成计划',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.orange,
+          side: const BorderSide(color: AppColors.orange, width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  void _confirmRegenerate(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          '重新生成计划',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          '当前计划将被清除，需要重新由 AI 生成。确定要重新生成吗？',
+          style: TextStyle(
+            fontSize: 13,
+            color: AppColors.textSecondary,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              planProvider.reset();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orange),
+            child: const Text('重新生成'),
           ),
         ],
       ),

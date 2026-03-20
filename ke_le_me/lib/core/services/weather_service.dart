@@ -72,6 +72,39 @@ class WeatherService {
     }
   }
 
+  /// 坐标 → 城市名（反向地理编码，使用 Open-Meteo geocoding 的 nearest 模式）
+  Future<String?> reverseGeocode(double lat, double lon) async {
+    // Open-Meteo geocoding 不直接支持 reverse，使用 Nominatim
+    final nominatimUri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
+      'lat': lat.toString(),
+      'lon': lon.toString(),
+      'format': 'json',
+      'zoom': '10',
+      'accept-language': 'zh',
+    });
+
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(nominatimUri);
+      request.headers.set('User-Agent', 'KeLeMeApp/1.0');
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) return null;
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      final address = json['address'] as Map<String, dynamic>?;
+      if (address == null) return null;
+      // 优先取 city，然后 town / county
+      return (address['city'] as String?) ??
+          (address['town'] as String?) ??
+          (address['county'] as String?) ??
+          (address['state'] as String?);
+    } catch (_) {
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
   /// 城市名 → 坐标（使用 Open-Meteo geocoding API，免费无 key）
   Future<({double lat, double lon})> geocodeCity(String city) async {
     final uri = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {

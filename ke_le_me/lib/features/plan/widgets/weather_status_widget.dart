@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/plan_provider.dart';
 
-/// 天气状态 Widget：三态（加载中 / 成功 / 失败）
+/// 天气状态 Widget：三态（加载中 / 成功 / 失败）+ 城市可编辑
 class WeatherStatusWidget extends StatefulWidget {
   final PlanProvider planProvider;
 
@@ -15,13 +15,28 @@ class WeatherStatusWidget extends StatefulWidget {
 
 class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
   final _cityController = TextEditingController();
+  bool _showCityInput = false;
 
   PlanProvider get _p => widget.planProvider;
 
   @override
+  void initState() {
+    super.initState();
+    _p.addListener(_onProviderChanged);
+  }
+
+  @override
   void dispose() {
+    _p.removeListener(_onProviderChanged);
     _cityController.dispose();
     super.dispose();
+  }
+
+  void _onProviderChanged() {
+    // 天气加载成功后自动收起城市输入框
+    if (_p.status == PlanStatus.inputReady && _showCityInput) {
+      setState(() => _showCityInput = false);
+    }
   }
 
   @override
@@ -43,7 +58,7 @@ class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
             ),
             SizedBox(width: 10),
             Text(
-              '正在定位...',
+              '正在获取天气...',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
           ],
@@ -51,7 +66,7 @@ class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
       );
     }
 
-    // 天气失败
+    // 天气失败 → 直接显示城市输入
     if (status == PlanStatus.weatherError) {
       return _buildCard(
         child: Column(
@@ -77,53 +92,7 @@ class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
               ],
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _cityController,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: '输入城市名，如：上海',
-                      hintStyle: const TextStyle(
-                        color: AppColors.textHint,
-                        fontSize: 12,
-                      ),
-                      filled: true,
-                      fillColor: AppColors.bgSection,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    onSubmitted: (v) => _searchCity(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _searchCity,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.blue,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.search,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _buildCitySearchRow(),
           ],
         ),
       );
@@ -134,73 +103,101 @@ class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
     if (weather != null) {
       final emoji = _weatherEmoji(weather.weatherCode);
       return _buildCard(
-        child: Row(
+        child: Column(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 22)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${weather.temperature.round()}℃',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            '${weather.temperature.round()}℃',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '体感 ${weather.apparentTemp.round()}℃',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textHint,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(height: 2),
                       Text(
-                        '体感 ${weather.apparentTemp.round()}℃',
+                        '湿度 ${weather.humidity.round()}%  ·  ${weather.weatherDescription}',
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textHint,
                         ),
                       ),
-                      if (_p.cityName != null) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.bgSection,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _p.cityName!,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '湿度 ${weather.humidity.round()}%  ·  ${weather.weatherDescription}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textHint,
+                ),
+                // 城市名标签（可点击切换城市）
+                GestureDetector(
+                  onTap: () => setState(() => _showCityInput = !_showCityInput),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.blueLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          size: 12,
+                          color: AppColors.blue,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          _p.cityName ?? '自动定位',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.blue,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          _showCityInput
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          size: 14,
+                          color: AppColors.blue,
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(
-                Icons.refresh,
-                size: 18,
-                color: AppColors.textHint,
+            // 展开的城市输入框
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 250),
+              crossFadeState: _showCityInput
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              firstChild: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: _buildCitySearchRow(),
               ),
-              onPressed: _p.retryWeather,
-              tooltip: '刷新天气',
+              secondChild: const SizedBox.shrink(),
             ),
           ],
         ),
@@ -209,6 +206,50 @@ class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
 
     // 默认空
     return const SizedBox.shrink();
+  }
+
+  /// 城市搜索输入行（复用）
+  Widget _buildCitySearchRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _cityController,
+            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: '输入城市名，如：上海',
+              hintStyle: const TextStyle(
+                color: AppColors.textHint,
+                fontSize: 12,
+              ),
+              filled: true,
+              fillColor: AppColors.bgMain,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+            ),
+            onSubmitted: (_) => _searchCity(),
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: _searchCity,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.blue,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.search, size: 18, color: Colors.white),
+          ),
+        ),
+      ],
+    );
   }
 
   void _searchCity() {

@@ -117,6 +117,13 @@ class PlanProvider extends ChangeNotifier {
       weather = await WeatherService.instance.getWeather(loc.lat, loc.lon);
       if (loc.isDefault) {
         cityName = '北京';
+      } else {
+        // 反向地理编码获取城市名
+        final name = await WeatherService.instance.reverseGeocode(
+          loc.lat,
+          loc.lon,
+        );
+        cityName = name ?? '当前位置';
       }
       status = PlanStatus.inputReady;
     } catch (e) {
