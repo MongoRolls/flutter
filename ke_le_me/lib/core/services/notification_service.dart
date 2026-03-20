@@ -46,8 +46,9 @@ class NotificationService {
     final timeZoneName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneName));
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
 
     const darwinSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -66,15 +67,19 @@ class NotificationService {
 
   Future<bool> requestPermission() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       final granted = await android?.requestNotificationsPermission();
       return granted ?? false;
     }
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      final ios = _plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       final granted = await ios?.requestPermissions(
         alert: true,
         badge: true,
@@ -84,8 +89,10 @@ class NotificationService {
     }
 
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      final macos = _plugin.resolvePlatformSpecificImplementation<
-          MacOSFlutterLocalNotificationsPlugin>();
+      final macos = _plugin
+          .resolvePlatformSpecificImplementation<
+            MacOSFlutterLocalNotificationsPlugin
+          >();
       final granted = await macos?.requestPermissions(
         alert: true,
         badge: true,
@@ -222,7 +229,10 @@ class NotificationService {
     required DateTime scheduledDate,
     String repeat = 'none',
   }) async {
-    final tz.TZDateTime scheduledTZ = tz.TZDateTime.from(scheduledDate, tz.local);
+    final tz.TZDateTime scheduledTZ = tz.TZDateTime.from(
+      scheduledDate,
+      tz.local,
+    );
     if (scheduledTZ.isBefore(tz.TZDateTime.now(tz.local))) {
       if (repeat == 'none') return;
     }
@@ -254,14 +264,21 @@ class NotificationService {
       matchDateTimeComponents: repeat == 'daily'
           ? DateTimeComponents.time
           : repeat == 'weekly'
-              ? DateTimeComponents.dayOfWeekAndTime
-              : null,
+          ? DateTimeComponents.dayOfWeekAndTime
+          : null,
     );
   }
 
   /// 取消单个自定义提醒
   Future<void> cancelReminder(int id) async {
     await _plugin.cancel(id: id);
+  }
+
+  /// 取消计划提醒（ID 范围 1000-1019，最多 12 个槽位 + 缓冲）
+  Future<void> cancelPlanReminders() async {
+    for (var id = 1000; id < 1020; id++) {
+      await _plugin.cancel(id: id);
+    }
   }
 
   Future<void> cancelAll() async {

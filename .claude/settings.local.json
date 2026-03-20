@@ -23,7 +23,8 @@
       "Bash(skills --help:*)",
       "Bash(skills search:*)",
       "Bash(skills list:*)",
-      "Bash(skills add:*)"
+      "Bash(skills add:*)",
+      "Bash(wc:*)"
     ]
   }
 }

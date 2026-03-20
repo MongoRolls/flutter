@@ -6,6 +6,7 @@ import '../../../core/models/drink_log.dart';
 import '../../../core/models/drink_preset.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../../core/utils/app_version.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../../common/widgets/progress_ring.dart';
 import '../widgets/weather_goal_card.dart';
@@ -187,7 +188,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   _buildMiniStats(),
                   _buildScheduleCard(),
                   _buildStreakCalendar(now),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Text(
+                      AppVersion.display,
+                      style: const TextStyle(
+                        color: Colors.white24,
+                        fontSize: 11,
+                        fontFamily: 'SpaceMono',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -255,33 +268,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           const Spacer(),
-          _headerBtn(
-            Icons.smart_toy_outlined,
-            () => Navigator.pushNamed(context, '/chat'),
-          ),
-          const SizedBox(width: 8),
-          _headerBtn(Icons.notifications_outlined, () {}),
-          const SizedBox(width: 8),
-          _headerBtn(
-            Icons.settings_outlined,
-            () => Navigator.pushNamed(context, '/settings'),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _headerBtn(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.bgSection,
-        ),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
       ),
     );
   }

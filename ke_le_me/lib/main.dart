@@ -8,11 +8,10 @@ import 'core/models/custom_reminder.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/user_provider.dart';
 import 'core/services/notification_service.dart';
+import 'features/plan/models/today_plan.dart';
 import 'features/onboarding/screens/onboarding_screen.dart';
-import 'features/home/screens/home_screen.dart';
-import 'features/settings/screens/settings_screen.dart';
 import 'features/debug/screens/debug_screen.dart';
-import 'features/chat/screens/chat_screen.dart';
+import 'main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,9 +19,11 @@ void main() async {
   Hive.registerAdapter(MemoryFactAdapter());
   Hive.registerAdapter(SessionSummaryAdapter());
   Hive.registerAdapter(CustomReminderAdapter());
+  Hive.registerAdapter(TodayPlanAdapter());
   await Hive.openBox<MemoryFact>('memory_facts');
   await Hive.openBox<SessionSummary>('session_summaries');
   await Hive.openBox<CustomReminder>('custom_reminders');
+  await Hive.openBox<TodayPlan>('today_plans');
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -86,14 +87,11 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
               ),
             )
           : _userProvider.profile.onboardingCompleted
-              ? HomeScreen(userProvider: _userProvider)
-              : OnboardingScreen(userProvider: _userProvider),
+          ? MainShell(userProvider: _userProvider)
+          : OnboardingScreen(userProvider: _userProvider),
       routes: {
         '/onboarding': (_) => OnboardingScreen(userProvider: _userProvider),
-        '/home': (_) => HomeScreen(userProvider: _userProvider),
-        '/settings': (_) => SettingsScreen(userProvider: _userProvider),
         '/debug': (_) => DebugScreen(userProvider: _userProvider),
-        '/chat': (_) => ChatScreen(userProvider: _userProvider),
       },
     );
   }

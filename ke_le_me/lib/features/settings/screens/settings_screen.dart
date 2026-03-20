@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/utils/app_version.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../chat/services/ai_config.dart';
 import 'health_archive_screen.dart';
@@ -89,11 +90,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ..clearSnackBars()
         ..showSnackBar(
           SnackBar(
-            content: const Text('设置已保存 ✓',
-                style: TextStyle(color: Colors.white)),
+            content: const Text(
+              '设置已保存 ✓',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppColors.textPrimary,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
     }
@@ -133,24 +138,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: const BoxDecoration(
         color: AppColors.bgCard,
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.bgSection,
               ),
-              child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.textSecondary),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          const Text('个人设置',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const Text(
+            '个人设置',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -177,7 +199,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'sk-xxxxxxxx（留空则使用内置 Key）',
-              hintStyle: const TextStyle(color: AppColors.textHint, fontSize: 13),
+              hintStyle: const TextStyle(
+                color: AppColors.textHint,
+                fontSize: 13,
+              ),
               filled: true,
               fillColor: AppColors.bgSection,
               border: OutlineInputBorder(
@@ -188,14 +213,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: AppColors.blue, width: 1.5),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _apiKeyObscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _apiKeyObscured
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   size: 20,
                   color: AppColors.textHint,
                 ),
-                onPressed: () => setState(() => _apiKeyObscured = !_apiKeyObscured),
+                onPressed: () =>
+                    setState(() => _apiKeyObscured = !_apiKeyObscured),
               ),
             ),
           ),
@@ -226,7 +257,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             backgroundColor: AppColors.textPrimary,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
     }
@@ -247,18 +280,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: Slider(
                   value: _goalMl.toDouble(),
-                  min: 1500, max: 4000, divisions: 25,
+                  min: 1500,
+                  max: 4000,
+                  divisions: 25,
                   onChanged: (v) => setState(() => _goalMl = v.round()),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.blueLight,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text('${_goalMl}ml',
-                    style: AppColors.monoStyle(AppColors.blue).copyWith(fontSize: 13)),
+                child: Text(
+                  '${_goalMl}ml',
+                  style: AppColors.monoStyle(
+                    AppColors.blue,
+                  ).copyWith(fontSize: 13),
+                ),
               ),
             ],
           ),
@@ -271,7 +313,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: Slider(
                   value: _weight,
-                  min: 40, max: 120, divisions: 80,
+                  min: 40,
+                  max: 120,
+                  divisions: 80,
                   onChanged: (v) => setState(() {
                     _weight = v;
                     _goalMl = (v * 35).round().clamp(1500, 4000);
@@ -279,13 +323,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.bgSection,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text('${_weight.round()}kg',
-                    style: AppColors.monoStyle(AppColors.textSecondary).copyWith(fontSize: 13)),
+                child: Text(
+                  '${_weight.round()}kg',
+                  style: AppColors.monoStyle(
+                    AppColors.textSecondary,
+                  ).copyWith(fontSize: 13),
+                ),
               ),
             ],
           ),
@@ -341,9 +392,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _sectionTitle('🔔', '提醒开关'),
           const SizedBox(height: 4),
-          _switchRow('推送通知', '锁屏显示喝水提醒', Icons.notifications_outlined,
-              AppColors.blue, _notificationsEnabled,
-              (v) => setState(() => _notificationsEnabled = v), showDivider: false),
+          _switchRow(
+            '推送通知',
+            '锁屏显示喝水提醒',
+            Icons.notifications_outlined,
+            AppColors.blue,
+            _notificationsEnabled,
+            (v) => setState(() => _notificationsEnabled = v),
+            showDivider: false,
+          ),
         ],
       ),
     );
@@ -365,7 +422,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Row(
             children: [
               Container(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(9),
@@ -377,11 +435,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-                    Text(desc,
-                        style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      desc,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textHint,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -389,8 +457,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
-        if (showDivider)
-          Container(height: 1, color: AppColors.divider),
+        if (showDivider) Container(height: 1, color: AppColors.divider),
       ],
     );
   }
@@ -412,25 +479,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _label('提醒间隔'),
           const SizedBox(height: 8),
           Wrap(
-            spacing: 8, runSpacing: 8,
+            spacing: 8,
+            runSpacing: 8,
             children: [30, 60, 90, 120].map((min) {
               final isSelected = min == _intervalMin;
-              final label = min == 30 ? '30分钟' : min == 60 ? '1小时' : min == 90 ? '1.5小时' : '2小时';
+              final label = min == 30
+                  ? '30分钟'
+                  : min == 60
+                  ? '1小时'
+                  : min == 90
+                  ? '1.5小时'
+                  : '2小时';
               return GestureDetector(
                 onTap: () => setState(() => _intervalMin = min),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 9,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.blue : AppColors.bgSection,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(label,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      )),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isSelected
+                          ? Colors.white
+                          : AppColors.textSecondary,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
                 ),
               );
             }).toList(),
@@ -466,18 +549,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const Spacer(),
           GestureDetector(
             onTap: () async {
               final parts = time.split(':');
               final picked = await showTimePicker(
                 context: context,
-                initialTime: TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
+                initialTime: TimeOfDay(
+                  hour: int.parse(parts[0]),
+                  minute: int.parse(parts[1]),
+                ),
                 builder: (context, child) => Theme(
                   data: Theme.of(context).copyWith(
-                    colorScheme: const ColorScheme.light(primary: AppColors.blue),
+                    colorScheme: const ColorScheme.light(
+                      primary: AppColors.blue,
+                    ),
                   ),
                   child: child!,
                 ),
@@ -496,9 +590,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: Row(
                 children: [
-                  Text(time, style: AppColors.monoStyle(AppColors.blue).copyWith(fontSize: 15)),
+                  Text(
+                    time,
+                    style: AppColors.monoStyle(
+                      AppColors.blue,
+                    ).copyWith(fontSize: 15),
+                  ),
                   const SizedBox(width: 6),
-                  const Icon(Icons.access_time, size: 15, color: AppColors.blue),
+                  const Icon(
+                    Icons.access_time,
+                    size: 15,
+                    color: AppColors.blue,
+                  ),
                 ],
               ),
             ),
@@ -515,8 +618,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _sectionTitle('🧠', 'AI 健康档案'),
           const SizedBox(height: 4),
-          const Text('AI 助手从对话中记住的信息',
-              style: TextStyle(fontSize: 12, color: AppColors.textHint)),
+          const Text(
+            'AI 助手从对话中记住的信息',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -524,7 +629,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const HealthArchiveScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const HealthArchiveScreen(),
+                  ),
                 );
               },
               icon: const Icon(Icons.folder_outlined, size: 18),
@@ -532,7 +639,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.blue,
                 side: const BorderSide(color: AppColors.blue, width: 1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),
@@ -548,15 +657,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _sectionTitle('🧪', '模拟测试'),
           const SizedBox(height: 4),
-          const Text('点击按钮体验喝水提醒效果',
-              style: TextStyle(fontSize: 12, color: AppColors.textHint)),
+          const Text(
+            '点击按钮体验喝水提醒效果',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _showTestReminder,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.orange),
-              icon: const Icon(Icons.notifications_active_outlined, color: Colors.white, size: 18),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orange,
+              ),
+              icon: const Icon(
+                Icons.notifications_active_outlined,
+                color: Colors.white,
+                size: 18,
+              ),
               label: const Text('触发喝水提醒'),
             ),
           ),
@@ -592,14 +709,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Column(
           children: [
-            Text(
-              '渴了么 v2.0.0',
-              style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+            const Text(
+              '渴了么',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              AppVersion.display,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                fontFamily: 'SpaceMono',
+              ),
             ),
             const SizedBox(height: 4),
-            Text(
-              'KE LE ME · 本地版',
-              style: const TextStyle(fontSize: 10, color: AppColors.divider),
+            const Text(
+              AppVersion.buildDate,
+              style: TextStyle(fontSize: 12, color: AppColors.textHint),
             ),
           ],
         ),
@@ -608,25 +739,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _sectionTitle(String emoji, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
-            Text(text,
-                style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary, letterSpacing: 0.5,
-                )),
-          ],
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.5,
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
-  Widget _label(String text) => Text(text,
-      style: const TextStyle(
-        fontSize: 12, fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary,
-      ));
+  Widget _label(String text) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: AppColors.textSecondary,
+    ),
+  );
 
   String _intervalLabelStr(int minutes) {
     if (minutes == 30) return '30分钟';
