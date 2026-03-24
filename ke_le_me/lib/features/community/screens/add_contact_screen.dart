@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../models/care_contact.dart';
 
 /// 添加关怀联系人页面
@@ -59,7 +60,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A2340),
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -77,12 +78,10 @@ class _AddContactScreenState extends State<AddContactScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isSelected
-                        ? const Color(0x20FF6B9D)
-                        : const Color(0xFFF5F5F5),
+                        ? AppColors.pinkBgMedium
+                        : AppColors.greySection,
                     border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFFFF6B9D)
-                          : Colors.transparent,
+                      color: isSelected ? AppColors.pink : Colors.transparent,
                       width: 2,
                     ),
                   ),
@@ -100,7 +99,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A2340),
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -109,18 +108,18 @@ class _AddContactScreenState extends State<AddContactScreen> {
             decoration: InputDecoration(
               hintText: '输入 TA 的名字',
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppColors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE8EFF5)),
+                borderSide: const BorderSide(color: AppColors.divider),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE8EFF5)),
+                borderSide: const BorderSide(color: AppColors.divider),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF29B6F6)),
+                borderSide: const BorderSide(color: AppColors.blue),
               ),
             ),
           ),
@@ -132,7 +131,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A2340),
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -143,7 +142,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
               return ChoiceChip(
                 label: Text(option.$2),
                 selected: isSelected,
-                selectedColor: const Color(0x20FF6B9D),
+                selectedColor: AppColors.pinkBgMedium,
                 onSelected: (_) => setState(() => _relationship = option.$1),
               );
             }).toList(),
@@ -157,8 +156,8 @@ class _AddContactScreenState extends State<AddContactScreen> {
             child: ElevatedButton(
               onPressed: _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF29B6F6),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.blue,
+                foregroundColor: AppColors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),

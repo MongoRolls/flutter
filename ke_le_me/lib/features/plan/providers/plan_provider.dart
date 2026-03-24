@@ -127,6 +127,7 @@ class PlanProvider extends ChangeNotifier {
       }
       status = PlanStatus.inputReady;
     } catch (e) {
+      debugPrint('Error loading weather: $e');
       status = PlanStatus.weatherError;
       errorMessage = '定位失败，请手动输入城市名';
     }
@@ -147,6 +148,7 @@ class PlanProvider extends ChangeNotifier {
       cityName = city;
       status = PlanStatus.inputReady;
     } catch (e) {
+      debugPrint('Error loading weather: $e');
       status = PlanStatus.weatherError;
       errorMessage = '找不到城市"$city"，请重新输入';
     }
@@ -279,6 +281,7 @@ class PlanProvider extends ChangeNotifier {
   /// 采纳为每日目标（更新 UserProvider）
   Future<void> adoptAsGoal() async {
     if (todayPlan == null) return;
+    // TODO: should use UserProvider setter
     _userProvider.profile.dailyGoalMl = todayPlan!.totalMl;
     await _userProvider.saveProfile();
     notifyListeners();
@@ -297,14 +300,20 @@ class PlanProvider extends ChangeNotifier {
     final slots = todayPlan!.slots;
     for (int i = 0; i < slots.length; i++) {
       final slot = slots[i];
-      final parts = slot.time.split(':');
-      final dt = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        int.parse(parts[0]),
-        int.parse(parts[1]),
-      );
+      final DateTime dt;
+      try {
+        final parts = slot.time.split(':');
+        dt = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          int.parse(parts[0]),
+          int.parse(parts[1]),
+        );
+      } catch (e) {
+        debugPrint('Error parsing slot time "${slot.time}": $e');
+        continue;
+      }
       if (dt.isAfter(now)) {
         await NotificationService.instance.scheduleCustomReminder(
           title: '${slot.note}（${slot.ml}ml）',

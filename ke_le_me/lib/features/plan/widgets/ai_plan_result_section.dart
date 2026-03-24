@@ -177,6 +177,7 @@ class AiPlanResultSection extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
+              if (!context.mounted) return;
               planProvider.reset();
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.orange),

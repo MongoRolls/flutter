@@ -21,33 +21,37 @@ class HeartProvider extends ChangeNotifier {
 
   /// 初始化加载
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    // 加载联系人
-    final contactsJson = prefs.getString('care_contacts');
-    if (contactsJson != null) {
-      final list = jsonDecode(contactsJson) as List;
-      _contacts = list.map((e) => CareContact.fromMap(e)).toList();
-    } else {
-      // 首次使用：加载预置联系人
-      _contacts = CareContact.defaults;
-      await _saveContacts(prefs);
+      // 加载联系人
+      final contactsJson = prefs.getString('care_contacts');
+      if (contactsJson != null) {
+        final list = jsonDecode(contactsJson) as List;
+        _contacts = list.map((e) => CareContact.fromMap(e)).toList();
+      } else {
+        // 首次使用：加载预置联系人
+        _contacts = CareContact.defaults;
+        await _saveContacts(prefs);
+      }
+
+      // 加载关怀记录
+      final recordsJson = prefs.getString('care_records');
+      if (recordsJson != null) {
+        final list = jsonDecode(recordsJson) as List;
+        _records = list.map((e) => CareRecord.fromMap(e)).toList();
+      } else {
+        _records = CareRecord.mockRecords;
+        await _saveRecords(prefs);
+      }
+
+      // 每日刷新联系人 mock 水量
+      _refreshMockWaterIfNeeded(prefs);
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading heart data: $e');
     }
-
-    // 加载关怀记录
-    final recordsJson = prefs.getString('care_records');
-    if (recordsJson != null) {
-      final list = jsonDecode(recordsJson) as List;
-      _records = list.map((e) => CareRecord.fromMap(e)).toList();
-    } else {
-      _records = CareRecord.mockRecords;
-      await _saveRecords(prefs);
-    }
-
-    // 每日刷新联系人 mock 水量
-    _refreshMockWaterIfNeeded(prefs);
-
-    notifyListeners();
   }
 
   /// 每日刷新联系人 mock 水量

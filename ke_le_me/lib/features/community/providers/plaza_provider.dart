@@ -45,35 +45,39 @@ class PlazaProvider extends ChangeNotifier {
 
   /// 初始化加载
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    // 加载挑战
-    final challengesJson = prefs.getString('plaza_challenges');
-    if (challengesJson != null) {
-      final list = jsonDecode(challengesJson) as List;
-      _challenges = list.map((e) => Challenge.fromMap(e)).toList();
-    } else {
-      _challenges = Challenge.defaults;
-      await _saveChallenges(prefs);
+      // 加载挑战
+      final challengesJson = prefs.getString('plaza_challenges');
+      if (challengesJson != null) {
+        final list = jsonDecode(challengesJson) as List;
+        _challenges = list.map((e) => Challenge.fromMap(e)).toList();
+      } else {
+        _challenges = Challenge.defaults;
+        await _saveChallenges(prefs);
+      }
+
+      // 加载成就
+      final achievementsJson = prefs.getString('plaza_achievements');
+      if (achievementsJson != null) {
+        final list = jsonDecode(achievementsJson) as List;
+        _achievements = list.map((e) => Achievement.fromMap(e)).toList();
+      } else {
+        _achievements = Achievement.defaults;
+        await _saveAchievements(prefs);
+      }
+
+      // 检查自动解锁
+      _checkAchievements(prefs);
+
+      // 更新挑战进度
+      _updateChallengeProgress(prefs);
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading plaza data: $e');
     }
-
-    // 加载成就
-    final achievementsJson = prefs.getString('plaza_achievements');
-    if (achievementsJson != null) {
-      final list = jsonDecode(achievementsJson) as List;
-      _achievements = list.map((e) => Achievement.fromMap(e)).toList();
-    } else {
-      _achievements = Achievement.defaults;
-      await _saveAchievements(prefs);
-    }
-
-    // 检查自动解锁
-    _checkAchievements(prefs);
-
-    // 更新挑战进度
-    _updateChallengeProgress(prefs);
-
-    notifyListeners();
   }
 
   /// 参与挑战

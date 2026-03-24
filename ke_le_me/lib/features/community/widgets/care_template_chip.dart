@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 /// 话术模板选择 Chip（2×2 网格）
 class CareTemplateChip extends StatelessWidget {
   final String emoji;
@@ -26,12 +28,12 @@ class CareTemplateChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0x15FF6B9D)
+              ? AppColors.pinkBg
               : Colors.white.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? const Color(0x50FF6B9D)
+                ? AppColors.pinkBorder
                 : Colors.white.withValues(alpha: 0.9),
             width: 1.5,
           ),
@@ -46,9 +48,7 @@ class CareTemplateChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isSelected
-                    ? const Color(0xFFC62A6B)
-                    : const Color(0xFF455A64),
+                color: isSelected ? AppColors.pinkDark : AppColors.textDark,
               ),
             ),
             const SizedBox(height: 2),
@@ -58,7 +58,7 @@ class CareTemplateChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: isSelected
-                    ? const Color(0xFFC62A6B)
+                    ? AppColors.pinkDark
                     : const Color(0xFF78909C),
                 height: 1.4,
               ),

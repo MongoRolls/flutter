@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 连续打卡展示（火焰 + 本周日历）
+import '../../../core/theme/app_theme.dart';
+
+/// 连续打卡展示（火焰 + ��周日历）
 class StreakDisplay extends StatefulWidget {
   final int streakDays;
   final int todayMl;
@@ -90,16 +92,14 @@ class _StreakDisplayState extends State<StreakDisplay>
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: _todayDone
-                        ? const Color(0xFFFF6D00)
-                        : const Color(0xFFBDBDBD),
+                    color: _todayDone ? AppColors.orangeFire : AppColors.grey,
                   ),
                 ),
                 Text(
                   _todayDone ? '太棒了，继续保持！' : '今天还没达标，加油！',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF90A4AE),
+                    color: AppColors.textHint,
                   ),
                 ),
               ],
@@ -140,9 +140,7 @@ class _StreakDisplayState extends State<StreakDisplay>
               ['一', '二', '三', '四', '五', '六', '日'][i],
               style: TextStyle(
                 fontSize: 11,
-                color: isToday
-                    ? const Color(0xFF29B6F6)
-                    : const Color(0xFF90A4AE),
+                color: isToday ? AppColors.blue : AppColors.textHint,
                 fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -156,16 +154,16 @@ class _StreakDisplayState extends State<StreakDisplay>
                 color: isFuture
                     ? Colors.transparent
                     : isDone
-                    ? const Color(0xFF29B6F6)
+                    ? AppColors.blue
                     : Colors.transparent,
                 border: Border.all(
                   color: isToday
-                      ? const Color(0xFF29B6F6)
+                      ? AppColors.blue
                       : isFuture
-                      ? const Color(0xFFE0E0E0)
+                      ? AppColors.greyLight
                       : isDone
-                      ? const Color(0xFF29B6F6)
-                      : const Color(0xFFE0E0E0),
+                      ? AppColors.blue
+                      : AppColors.greyLight,
                   width: isToday ? 2 : 1.5,
                 ),
               ),
@@ -176,9 +174,7 @@ class _StreakDisplayState extends State<StreakDisplay>
                       '${date.day}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isToday
-                            ? const Color(0xFF29B6F6)
-                            : const Color(0xFFBDBDBD),
+                        color: isToday ? AppColors.blue : AppColors.grey,
                         fontWeight: isToday
                             ? FontWeight.w600
                             : FontWeight.normal,

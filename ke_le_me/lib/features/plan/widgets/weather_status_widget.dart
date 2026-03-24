@@ -32,7 +32,17 @@ class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant WeatherStatusWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.planProvider != widget.planProvider) {
+      oldWidget.planProvider.removeListener(_onProviderChanged);
+      widget.planProvider.addListener(_onProviderChanged);
+    }
+  }
+
   void _onProviderChanged() {
+    if (!mounted) return;
     // 天气加载成功后自动收起城市输入框
     if (_p.status == PlanStatus.inputReady && _showCityInput) {
       setState(() => _showCityInput = false);
@@ -245,7 +255,7 @@ class _WeatherStatusWidgetState extends State<WeatherStatusWidget> {
               color: AppColors.blue,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.search, size: 18, color: Colors.white),
+            child: const Icon(Icons.search, size: 18, color: AppColors.white),
           ),
         ),
       ],

@@ -120,7 +120,7 @@ class _StreamingTextCardState extends State<StreamingTextCard>
           Center(
             child: AnimatedBuilder(
               animation: _dotController,
-              builder: (_, _) => Row(
+              builder: (context, child) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(3, (i) {
                   final delay = i * 0.2;

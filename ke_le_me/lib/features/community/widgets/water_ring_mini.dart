@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 /// 迷你水量进度环（参考 HTML 稿中的 SVG 圆环）
 class WaterRingMini extends StatelessWidget {
   final double progress; // 0.0 ~ 1.0
@@ -10,9 +12,9 @@ class WaterRingMini extends StatelessWidget {
   const WaterRingMini({super.key, required this.progress, this.size = 36});
 
   Color get _ringColor {
-    if (progress >= 0.8) return const Color(0xFF66BB6A);
-    if (progress >= 0.4) return const Color(0xFFFFA726);
-    return const Color(0xFFEF5350);
+    if (progress >= 0.8) return AppColors.greenSoft;
+    if (progress >= 0.4) return AppColors.orangeWarm;
+    return AppColors.red;
   }
 
   @override
@@ -28,7 +30,7 @@ class WaterRingMini extends StatelessWidget {
             painter: _RingPainter(
               progress: progress.clamp(0.0, 1.0),
               color: _ringColor,
-              bgColor: const Color(0xFFE0E0E0),
+              bgColor: AppColors.greyLight,
               strokeWidth: 3,
             ),
           ),
@@ -37,7 +39,7 @@ class WaterRingMini extends StatelessWidget {
             style: TextStyle(
               fontSize: size * 0.25,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF1A1A2E),
+              color: AppColors.textBody,
             ),
           ),
         ],

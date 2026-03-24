@@ -69,14 +69,14 @@ class _PlanScreenState extends State<PlanScreen> {
                       duration: const Duration(milliseconds: 350),
                       child: switch (_p.status) {
                         PlanStatus.generating => StreamingTextCard(
-                            key: const ValueKey('streaming'),
-                            text: _p.streamingText,
-                          ),
+                          key: const ValueKey('streaming'),
+                          text: _p.streamingText,
+                        ),
                         PlanStatus.hasPlan => AiPlanResultSection(
-                            key: const ValueKey('result'),
-                            planProvider: _p,
-                            userProvider: _u,
-                          ),
+                          key: const ValueKey('result'),
+                          planProvider: _p,
+                          userProvider: _u,
+                        ),
                         _ => const SizedBox.shrink(key: ValueKey('none')),
                       },
                     ),
@@ -120,10 +120,7 @@ class _PlanScreenState extends State<PlanScreen> {
               ),
               Text(
                 '${now.year}年${now.month}月${now.day}日',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textHint,
-                ),
+                style: const TextStyle(fontSize: 11, color: AppColors.textHint),
               ),
             ],
           ),
@@ -158,7 +155,11 @@ class _PlanScreenState extends State<PlanScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, size: 16, color: AppColors.red),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: AppColors.red,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -234,7 +235,7 @@ class _PlanScreenState extends State<PlanScreen> {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white54,
+                  color: AppColors.textHint,
                 ),
               ),
               const SizedBox(width: 10),
@@ -263,6 +264,7 @@ class _PlanScreenState extends State<PlanScreen> {
     );
 
     if (picked != null) {
+      if (!mounted) return;
       _p.setWakeTimeOverride(
         '${picked.hour.toString().padLeft(2, '0')}:'
         '${picked.minute.toString().padLeft(2, '0')}',

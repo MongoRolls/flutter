@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../models/today_plan.dart';
 import '../providers/plan_provider.dart';
 
 class ActionRow extends StatelessWidget {
@@ -8,20 +9,35 @@ class ActionRow extends StatelessWidget {
 
   const ActionRow({super.key, required this.planProvider});
 
+  static List<String> _futureSlotTimes(List<PlanTimeSlot> slots) {
+    final now = DateTime.now();
+    return slots
+        .where((s) {
+          try {
+            final parts = s.time.split(':');
+            final dt = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              int.parse(parts[0]),
+              int.parse(parts[1]),
+            );
+            return dt.isAfter(now);
+          } catch (e) {
+            debugPrint('Error parsing slot time "${s.time}": $e');
+            return false;
+          }
+        })
+        .map((s) => s.time)
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final plan = planProvider.todayPlan;
     if (plan == null) return const SizedBox.shrink();
 
-    final now = DateTime.now();
-    final futureSlotTimes = plan.slots.where((s) {
-      final parts = s.time.split(':');
-      final dt = DateTime(
-        now.year, now.month, now.day,
-        int.parse(parts[0]), int.parse(parts[1]),
-      );
-      return dt.isAfter(now);
-    }).map((s) => s.time).toList();
+    final futureSlotTimes = _futureSlotTimes(plan.slots);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -77,9 +93,7 @@ class ActionRow extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           '设为今日目标',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -119,14 +133,15 @@ class ActionRow extends StatelessWidget {
     );
   }
 
-  void _confirmSyncReminders(BuildContext context, List<String> futureSlotTimes) {
+  void _confirmSyncReminders(
+    BuildContext context,
+    List<String> futureSlotTimes,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           '设置今日饮水提醒',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),

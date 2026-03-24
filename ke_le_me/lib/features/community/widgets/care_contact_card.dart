@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../models/care_contact.dart';
 import 'water_ring_mini.dart';
 
@@ -40,17 +41,17 @@ class _CareContactCardState extends State<CareContactCard>
 
   /// 头像渐变色映射
   List<Color> get _avatarGradient => switch (widget.contact.relationship) {
-    'mom' => [const Color(0xFFF48FB1), const Color(0xFFF06292)],
+    'mom' => [AppColors.pinkLight, const Color(0xFFF06292)],
     'dad' => [const Color(0xFF64B5F6), const Color(0xFF42A5F5)],
     'partner' => [const Color(0xFFFF8A65), const Color(0xFFFF7043)],
-    _ => [const Color(0xFF81C784), const Color(0xFF66BB6A)],
+    _ => [const Color(0xFF81C784), AppColors.greenSoft],
   };
 
   /// 状态指示点颜色
   Color get _statusColor => switch (widget.contact.status) {
-    'done' => const Color(0xFF66BB6A),
-    'inProgress' => const Color(0xFFFFA726),
-    _ => const Color(0xFFEF5350),
+    'done' => AppColors.greenSoft,
+    'inProgress' => AppColors.orangeWarm,
+    _ => AppColors.red,
   };
 
   /// 饮水状态文案
@@ -63,11 +64,11 @@ class _CareContactCardState extends State<CareContactCard>
           children: [
             TextSpan(
               text: '✓ 已喝 ${c.mockTodayMl}ml',
-              style: const TextStyle(color: Color(0xFF66BB6A)),
+              style: const TextStyle(color: AppColors.greenSoft),
             ),
           ],
         ),
-        style: const TextStyle(fontSize: 11, color: Color(0xFF90A4AE)),
+        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
       );
     } else if (c.status == 'inProgress') {
       return Text.rich(
@@ -76,11 +77,11 @@ class _CareContactCardState extends State<CareContactCard>
           children: [
             TextSpan(
               text: '⚠ 仅喝了 ${c.mockTodayMl}ml',
-              style: const TextStyle(color: Color(0xFFFFA726)),
+              style: const TextStyle(color: AppColors.orangeWarm),
             ),
           ],
         ),
-        style: const TextStyle(fontSize: 11, color: Color(0xFF90A4AE)),
+        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
       );
     }
     return const Text.rich(
@@ -89,11 +90,11 @@ class _CareContactCardState extends State<CareContactCard>
         children: [
           TextSpan(
             text: '⚠ 还没开始喝',
-            style: TextStyle(color: Color(0xFFFFA726)),
+            style: TextStyle(color: AppColors.orangeWarm),
           ),
         ],
       ),
-      style: TextStyle(fontSize: 11, color: Color(0xFF90A4AE)),
+      style: TextStyle(fontSize: 11, color: AppColors.textHint),
     );
   }
 
@@ -174,7 +175,7 @@ class _CareContactCardState extends State<CareContactCard>
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1A1A2E),
+                    color: AppColors.textBody,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -215,10 +216,10 @@ class _CareContactCardState extends State<CareContactCard>
         decoration: BoxDecoration(
           gradient: isReminded
               ? const LinearGradient(
-                  colors: [Color(0xFF66BB6A), Color(0xFF43A047)],
+                  colors: [AppColors.greenSoft, AppColors.greenDark],
                 )
               : null,
-          color: isReminded ? null : const Color(0x15FF6B9D),
+          color: isReminded ? null : AppColors.pinkBg,
           borderRadius: BorderRadius.circular(8),
           border: isReminded
               ? null
@@ -229,7 +230,7 @@ class _CareContactCardState extends State<CareContactCard>
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w500,
-            color: isReminded ? Colors.white : const Color(0xFFE64A6A),
+            color: isReminded ? Colors.white : AppColors.redDeep,
           ),
         ),
       ),

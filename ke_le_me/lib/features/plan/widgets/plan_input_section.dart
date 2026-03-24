@@ -70,11 +70,7 @@ class _PlanInputSectionState extends State<PlanInputSection> {
                 ),
               ),
             ),
-            Icon(
-              Icons.keyboard_arrow_down,
-              size: 20,
-              color: AppColors.blue,
-            ),
+            Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.blue),
           ],
         ),
       ),
@@ -158,10 +154,7 @@ class _PlanInputSectionState extends State<PlanInputSection> {
           TextField(
             controller: _noteController,
             maxLength: 100,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textPrimary,
-            ),
+            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: '例如：今天有篮球比赛、感冒了多喝水...',
               hintStyle: const TextStyle(
@@ -204,16 +197,14 @@ class _PlanInputSectionState extends State<PlanInputSection> {
             decoration: BoxDecoration(
               color: isSelected ? AppColors.blue : AppColors.bgSection,
               borderRadius: BorderRadius.circular(20),
-              border: isSelected
-                  ? null
-                  : Border.all(color: AppColors.divider),
+              border: isSelected ? null : Border.all(color: AppColors.divider),
             ),
             child: Text(
               type,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? Colors.white : AppColors.textSecondary,
+                color: isSelected ? AppColors.white : AppColors.textSecondary,
               ),
             ),
           ),

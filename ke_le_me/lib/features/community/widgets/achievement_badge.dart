@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../models/achievement.dart';
 
 /// 成就徽章（已解锁=彩色，未解锁=灰色模糊）
@@ -21,12 +22,12 @@ class AchievementBadge extends StatelessWidget {
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: unlocked ? Colors.white : const Color(0xFFF5F5F5),
+          color: unlocked ? Colors.white : AppColors.greySection,
           borderRadius: BorderRadius.circular(14),
           boxShadow: unlocked
               ? [
                   BoxShadow(
-                    color: const Color(0xFF29B6F6).withValues(alpha: 0.15),
+                    color: AppColors.blue.withValues(alpha: 0.15),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -64,16 +65,14 @@ class AchievementBadge extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: unlocked
-                    ? const Color(0xFF1A2340)
-                    : const Color(0xFFBDBDBD),
+                color: unlocked ? AppColors.textPrimary : AppColors.grey,
               ),
             ),
             const SizedBox(height: 2),
             if (unlocked && achievement.unlockedAt != null)
               Text(
                 '${achievement.unlockedAt!.month}/${achievement.unlockedAt!.day}',
-                style: const TextStyle(fontSize: 10, color: Color(0xFF90A4AE)),
+                style: const TextStyle(fontSize: 10, color: AppColors.textHint),
               )
             else
               Text(
@@ -81,7 +80,7 @@ class AchievementBadge extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: Color(0xFFBDBDBD)),
+                style: const TextStyle(fontSize: 10, color: AppColors.grey),
               ),
           ],
         ),

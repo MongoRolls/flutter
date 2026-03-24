@@ -578,6 +578,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               );
               if (picked != null) {
+                if (!mounted) return;
                 onChanged(
                   '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}',
                 );

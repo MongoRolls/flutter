@@ -33,6 +33,9 @@ class TodayPlan extends HiveObject {
   @HiveField(8)
   final String completedSlotsJson; // 已完成的 slot 时间列表 ['07:30','09:00',...]
 
+  List<PlanTimeSlot>? _cachedSlots;
+  List<String>? _cachedCompletedSlots;
+
   TodayPlan({
     required this.date,
     required this.summary,
@@ -45,11 +48,12 @@ class TodayPlan extends HiveObject {
     this.completedSlotsJson = '[]',
   });
 
-  List<PlanTimeSlot> get slots => (jsonDecode(slotsJson) as List)
-      .map((e) => PlanTimeSlot.fromMap(e as Map<String, dynamic>))
-      .toList();
+  List<PlanTimeSlot> get slots =>
+      _cachedSlots ??= (jsonDecode(slotsJson) as List)
+          .map((e) => PlanTimeSlot.fromMap(e as Map<String, dynamic>))
+          .toList();
 
-  List<String> get completedSlots =>
+  List<String> get completedSlots => _cachedCompletedSlots ??=
       List<String>.from(jsonDecode(completedSlotsJson) as List);
 
   TodayPlan copyWithCompleted(List<String> newCompleted) => TodayPlan(

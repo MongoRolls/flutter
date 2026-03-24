@@ -46,10 +46,7 @@ class SlotTimeline extends StatelessWidget {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.greenLight,
                   borderRadius: BorderRadius.circular(6),
@@ -187,9 +184,10 @@ class SlotTimeline extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    planProvider.logSlotDrink(slot);
+                  onPressed: () async {
+                    await planProvider.logSlotDrink(slot);
                     Navigator.pop(ctx);
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(

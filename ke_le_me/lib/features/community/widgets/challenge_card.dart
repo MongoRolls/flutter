@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../models/challenge.dart';
 
 /// 挑战卡片
@@ -51,7 +52,7 @@ class ChallengeCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A2340),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -59,7 +60,7 @@ class ChallengeCard extends StatelessWidget {
                       challenge.description,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF90A4AE),
+                        color: AppColors.textHint,
                       ),
                     ),
                   ],
@@ -72,8 +73,8 @@ class ChallengeCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isCompleted
-                      ? const Color(0xFFFFF8E1)
-                      : const Color(0xFFF5F5F5),
+                      ? AppColors.yellowLight
+                      : AppColors.greySection,
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -96,11 +97,9 @@ class ChallengeCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: challenge.progressRatio,
-                      backgroundColor: const Color(0xFFE8EFF5),
+                      backgroundColor: AppColors.divider,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        isCompleted
-                            ? const Color(0xFF66BB6A)
-                            : const Color(0xFF29B6F6),
+                        isCompleted ? AppColors.greenSoft : AppColors.blue,
                       ),
                       minHeight: 6,
                     ),
@@ -112,7 +111,7 @@ class ChallengeCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF546E7A),
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -127,7 +126,7 @@ class ChallengeCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF66BB6A),
+                      color: AppColors.greenSoft,
                     ),
                   ),
                 ],
@@ -141,7 +140,7 @@ class ChallengeCard extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: onJoin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF29B6F6),
+                  backgroundColor: AppColors.blue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),

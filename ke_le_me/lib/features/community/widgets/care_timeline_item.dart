@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../models/care_record.dart';
 
 /// 关怀足迹时间线条目
@@ -9,17 +10,17 @@ class CareTimelineItem extends StatelessWidget {
   const CareTimelineItem({super.key, required this.record});
 
   Color get _dotColor => switch (record.dotType) {
-    'pink' => const Color(0xFFFF6B9D),
+    'pink' => AppColors.pink,
     'blue' => const Color(0xFF4FC3F7),
-    'purple' => const Color(0xFFAB47BC),
-    _ => const Color(0xFF90A4AE),
+    'purple' => AppColors.purpleSoft,
+    _ => AppColors.textHint,
   };
 
   List<Color> get _dotGradient => switch (record.dotType) {
-    'pink' => [const Color(0xFFFF6B9D), const Color(0xFFFF8A65)],
+    'pink' => [AppColors.pink, const Color(0xFFFF8A65)],
     'blue' => [const Color(0xFF4FC3F7), const Color(0xFF0288D1)],
-    'purple' => [const Color(0xFFAB47BC), const Color(0xFF7E57C2)],
-    _ => [const Color(0xFF90A4AE), const Color(0xFF78909C)],
+    'purple' => [AppColors.purpleSoft, const Color(0xFF7E57C2)],
+    _ => [AppColors.textHint, const Color(0xFF78909C)],
   };
 
   @override
@@ -93,14 +94,14 @@ class CareTimelineItem extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF455A64),
+                          color: AppColors.textDark,
                         ),
                       ),
                       Text(
                         record.formattedTime,
                         style: const TextStyle(
                           fontSize: 11,
-                          color: Color(0xFFB0BEC5),
+                          color: AppColors.greyWarm,
                         ),
                       ),
                     ],
@@ -110,7 +111,7 @@ class CareTimelineItem extends StatelessWidget {
                     '「${record.message}」',
                     style: const TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF1A1A2E),
+                      color: AppColors.textBody,
                       height: 1.5,
                     ),
                   ),
@@ -125,7 +126,7 @@ class CareTimelineItem extends StatelessWidget {
                             '${record.toLabel == '你' ? '你' : record.toLabel}回复：${record.replyText}',
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF66BB6A),
+                              color: AppColors.greenSoft,
                             ),
                           ),
                         ),
