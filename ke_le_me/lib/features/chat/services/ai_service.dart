@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'ai_config.dart';
+import '../../../core/services/backend_api_service.dart';
 import '../models/chat_message.dart';
 
 /// SSE 事件类型
@@ -37,39 +38,48 @@ class AiService {
   final AiConfig config;
 
   AiService({required this.config})
-      : _dio = Dio(BaseOptions(
-          baseUrl: config.baseUrl,
-          headers: {
-            'Authorization': 'Bearer ${config.apiKey}',
-            'Content-Type': 'application/json',
-          },
-          connectTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 120),
-        ));
+      : _dio = config.useBackendProxy
+            ? BackendApiService.instance.createDio(
+                connectTimeout: const Duration(seconds: 30),
+                receiveTimeout: const Duration(seconds: 120),
+              )
+            : Dio(BaseOptions(
+                baseUrl: config.baseUrl,
+                headers: {
+                  'Authorization': 'Bearer ${config.apiKey}',
+                  'Content-Type': 'application/json',
+                },
+                connectTimeout: const Duration(seconds: 30),
+                receiveTimeout: const Duration(seconds: 120),
+              ));
 
   /// 流式发送消息，返回 SSE 事件流
   Stream<AiStreamEvent> sendMessageStream({
     required List<Map<String, dynamic>> messages,
     required List<Map<String, dynamic>> tools,
   }) async* {
-    if (config.apiKey.isEmpty) {
-      yield const AiError('API Key 未配置，请使用 --dart-define=DEEPSEEK_API_KEY=sk-xxx 启动');
+    if (!config.useBackendProxy && config.apiKey.isEmpty) {
+      yield const AiError('API Key 未配置，请在设置中配置 Key 或启用后端代理');
       return;
     }
 
     try {
-      final requestBody = {
-        'model': config.model,
+      final requestBody = <String, dynamic>{
+        if (!config.useBackendProxy) 'model': config.model,
         'messages': messages,
         'tools': tools.isEmpty ? null : tools,
-        'tool_choice': tools.isEmpty ? null : 'auto',
+        if (!config.useBackendProxy) 'tool_choice': tools.isEmpty ? null : 'auto',
         'temperature': config.temperature,
         'max_tokens': config.maxTokens,
         'stream': true,
       }..removeWhere((_, v) => v == null);
 
-      debugPrint('=== DeepSeek API Request ===');
-      debugPrint('messages count: ${messages.length}');
+      final endpoint = config.useBackendProxy
+          ? 'chat'
+          : '/v1/chat/completions';
+
+      debugPrint('=== ${config.useBackendProxy ? "Backend Proxy" : "DeepSeek"} API Request ===');
+      debugPrint('endpoint: $endpoint, messages count: ${messages.length}');
       for (final m in messages) {
         final role = m['role'];
         final content = m['content'];
@@ -79,7 +89,7 @@ class AiService {
       }
 
       final response = await _dio.post<ResponseBody>(
-        '/v1/chat/completions',
+        endpoint,
         data: requestBody,
         options: Options(responseType: ResponseType.stream),
       );

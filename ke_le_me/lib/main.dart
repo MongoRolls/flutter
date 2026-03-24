@@ -7,6 +7,7 @@ import 'core/models/session_summary.dart';
 import 'core/models/custom_reminder.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/user_provider.dart';
+import 'core/services/backend_api_service.dart';
 import 'core/services/notification_service.dart';
 import 'features/plan/models/today_plan.dart';
 import 'features/onboarding/screens/onboarding_screen.dart';
@@ -52,7 +53,15 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
 
   Future<void> _init() async {
     try {
-      await NotificationService.instance.init();
+      await Future.wait([
+        NotificationService.instance.init(),
+        BackendApiService.instance.init(),
+      ]);
+      try {
+        await BackendApiService.instance.ensureAuthenticated();
+      } catch (e) {
+        debugPrint('Backend auth failed (offline mode): $e');
+      }
       await _userProvider.loadProfile();
       // 已完成 onboarding 且开启通知的用户，启动时重新调度
       if (_userProvider.profile.onboardingCompleted &&

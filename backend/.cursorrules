@@ -1,0 +1,362 @@
+# KeLeME Backend — Project Rules
+
+> Express.js + TypeScript API backend for the 渴了么 (KeLeME) Flutter app.
+> For the full architecture plan see `plan.md`.
+
+## Language
+
+Always respond in Chinese. 所有回复、注释说明、commit message、文档内容均使用中文。代码标识符（变量名、函数名、类名）保持英文。
+
+## Tech Stack
+
+- **Runtime**: Node.js 20+ LTS
+- **Language**: TypeScript (strict mode)
+- **Framework**: Express.js 4.x
+- **Database**: PostgreSQL via Prisma ORM
+- **Cache**: Redis (via ioredis)
+- **Auth**: JWT (access + refresh token)
+- **Validation**: Zod
+- **Logging**: Pino + pino-http
+- **Testing**: Vitest + Supertest
+- **AI**: SSE streaming proxy to DeepSeek API
+
+## Directory Structure
+
+```
+backend/
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── src/
+│   ├── index.ts                   # Entry: start Express server
+│   ├── app.ts                     # Express instance + middleware setup
+│   ├── config/
+│   │   └── env.ts                 # Zod-validated environment variables
+│   ├── middleware/
+│   │   ├── auth.ts                # JWT verification
+│   │   ├── rate-limit.ts          # Redis-backed rate limiting
+│   │   ├── validate.ts            # Zod request validation
+│   │   └── error-handler.ts       # Global error handler
+│   ├── routes/
+│   │   ├── auth.routes.ts
+│   │   ├── user.routes.ts
+│   │   ├── drink.routes.ts
+│   │   ├── ai.routes.ts           # SSE proxy
+│   │   ├── community.routes.ts
+│   │   └── sync.routes.ts
+│   ├── services/
+│   │   ├── auth.service.ts
+│   │   ├── user.service.ts
+│   │   ├── drink.service.ts
+│   │   ├── ai-proxy.service.ts
+│   │   ├── notification.service.ts
+│   │   └── sync.service.ts
+│   ├── utils/
+│   │   ├── jwt.ts
+│   │   ├── password.ts            # bcrypt helpers
+│   │   └── errors.ts              # AppError classes
+│   └── types/
+│       └── index.ts
+├── tests/
+├── docker-compose.yml             # PostgreSQL + Redis
+├── Dockerfile
+├── .env.example
+├── tsconfig.json
+└── package.json
+```
+
+Do NOT introduce `controllers/`, `repositories/`, `domain/`, or `data/` layers. Keep it flat: routes → services → Prisma.
+
+## Naming Conventions
+
+| Entity | Convention | Example |
+|--------|-----------|---------|
+| Files | `kebab-case.ts` | `ai-proxy.service.ts`, `error-handler.ts` |
+| Route files | `*.routes.ts` | `auth.routes.ts` |
+| Service files | `*.service.ts` | `drink.service.ts` |
+| Test files | `*.test.ts` | `auth.test.ts` |
+| Classes | `PascalCase` | `AppError`, `AiProxyService` |
+| Functions / variables | `camelCase` | `createUser`, `accessToken` |
+| Constants | `UPPER_SNAKE_CASE` | `JWT_SECRET`, `MAX_REQUESTS_PER_MIN` |
+| Env variables | `UPPER_SNAKE_CASE` | `DATABASE_URL`, `DEEPSEEK_API_KEY` |
+| Database tables | Prisma model `PascalCase` | `DrinkLog`, `UserProfile` |
+
+## Import Order
+
+Maintain this exact order, separated by blank lines:
+
+```typescript
+import { Router } from 'express';              // 1. Node / Express built-ins
+
+import { z } from 'zod';                        // 2. Third-party packages
+import { PrismaClient } from '@prisma/client';
+
+import { env } from '../config/env.js';          // 3. Local imports
+import { AppError } from '../utils/errors.js';
+```
+
+Use ES module `import`/`export` exclusively. No `require()`.
+
+## TypeScript Rules
+
+- Enable `strict: true` in `tsconfig.json`.
+- Prefer `interface` for object shapes, `type` for unions and intersections.
+- Use `as const` for literal arrays and objects.
+- Prefer `unknown` over `any`. If `any` is unavoidable, add a `// eslint-disable` comment with reason.
+- All function parameters and return types must be explicitly typed (no implicit `any`).
+- Use `readonly` for properties that should not be mutated after creation.
+
+## Route Patterns
+
+Each route file exports a single `Router`:
+
+```typescript
+import { Router } from 'express';
+
+import { auth } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { drinkService } from '../services/drink.service.js';
+import { createDrinkSchema } from './schemas/drink.schemas.js';
+
+const router = Router();
+
+router.post('/', auth, validate(createDrinkSchema), async (req, res, next) => {
+  try {
+    const result = await drinkService.addDrink(req.user.id, req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
+```
+
+- Every async route handler must wrap in `try { ... } catch (err) { next(err); }`.
+- Route files only parse request/response — business logic lives in services.
+- Group Zod schemas in a `schemas/` subfolder alongside routes, or co-locate in the route file if small.
+
+## Validation with Zod
+
+Define request schemas and infer TypeScript types from them:
+
+```typescript
+import { z } from 'zod';
+
+export const createDrinkSchema = z.object({
+  body: z.object({
+    ml: z.number().int().min(1).max(5000),
+    icon: z.string().max(10).default('💧'),
+    description: z.string().max(100).default('喝水'),
+  }),
+});
+
+export type CreateDrinkBody = z.infer<typeof createDrinkSchema>['body'];
+```
+
+The `validate` middleware takes a Zod schema and validates `req.body`, `req.query`, and/or `req.params` before the handler runs.
+
+## Service Layer
+
+- Services contain all business logic and database access.
+- Services receive typed inputs and return typed outputs — they never touch `req` or `res`.
+- One service per domain: `auth.service.ts`, `drink.service.ts`, etc.
+- Services use the shared Prisma client instance (instantiated once in `src/config/` or `src/index.ts`).
+
+```typescript
+import { prisma } from '../config/prisma.js';
+import { AppError } from '../utils/errors.js';
+
+export async function addDrink(userId: string, data: CreateDrinkBody) {
+  const log = await prisma.drinkLog.create({
+    data: { userId, ...data },
+  });
+  return log;
+}
+```
+
+## Error Handling
+
+Use a custom `AppError` class hierarchy:
+
+```typescript
+export class AppError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+    public code?: string,
+  ) {
+    super(message);
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(resource: string) {
+    super(404, `${resource} not found`, 'NOT_FOUND');
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized') {
+    super(401, message, 'UNAUTHORIZED');
+  }
+}
+```
+
+The global error handler in `middleware/error-handler.ts` catches `AppError` instances and returns structured JSON:
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "User not found"
+  }
+}
+```
+
+- Never expose stack traces or internal details in production.
+- Log full errors server-side with Pino; return sanitized messages to clients.
+- All unexpected errors return `500` with a generic message.
+
+## Authentication (JWT)
+
+- **Access token**: short-lived (15 min), carried in `Authorization: Bearer <token>`.
+- **Refresh token**: long-lived (7 days), stored in Redis with user ID as value.
+- `auth` middleware verifies the access token and attaches `req.user = { id, email }`.
+- Logout adds the refresh token to a Redis blacklist.
+- Never store JWTs in the database — they are stateless (except refresh token tracking in Redis).
+
+## AI Proxy — SSE Streaming
+
+The `/ai/chat` endpoint is a Server-Sent Events proxy to DeepSeek:
+
+```typescript
+router.post('/chat', auth, aiRateLimit, async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const controller = new AbortController();
+  req.on('close', () => controller.abort());
+
+  const upstream = await fetch(DEEPSEEK_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ...req.body, stream: true }),
+    signal: controller.signal,
+  });
+
+  upstream.body?.pipe(res);
+});
+```
+
+Key rules:
+- Disable `compression` middleware for SSE routes.
+- Abort the upstream request when the client disconnects (avoid wasting tokens).
+- Set `receiveTimeout` to at least 120 seconds for long AI responses.
+- Never expose `DEEPSEEK_API_KEY` to the client in any response or error message.
+
+## Rate Limiting
+
+Use `rate-limiter-flexible` with Redis:
+
+- General API: 100 requests / minute / user.
+- AI endpoints (`/ai/*`): 10 requests / minute / user.
+- Auth endpoints (`/auth/login`, `/auth/register`): 5 requests / minute / IP.
+- Return `429` with a `Retry-After` header and a Chinese-friendly message.
+
+## Database (Prisma)
+
+- Schema lives in `prisma/schema.prisma`. Run `npx prisma migrate dev` for development migrations.
+- Use `@@index` for frequently queried columns (e.g., `[userId, loggedAt]` on `DrinkLog`).
+- Use transactions (`prisma.$transaction`) when multiple writes must be atomic.
+- Never use raw SQL unless Prisma's query builder cannot express the query.
+- Always select only needed fields for list queries to minimize payload.
+
+## Environment Variables
+
+All env vars are validated at startup with Zod in `src/config/env.ts`:
+
+```typescript
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().default(3000),
+  DATABASE_URL: z.string().url(),
+  REDIS_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+  JWT_REFRESH_SECRET: z.string().min(32),
+  DEEPSEEK_API_KEY: z.string().startsWith('sk-'),
+});
+
+export const env = envSchema.parse(process.env);
+```
+
+If any required variable is missing, the app fails to start with a clear error message. Never use `process.env` directly outside this file.
+
+## Security Checklist
+
+- Use `helmet` for secure HTTP headers.
+- Use `cors` with explicit origin allowlist (no wildcard `*` in production).
+- Hash passwords with `bcryptjs` (cost factor 12+).
+- Validate all inputs with Zod — never trust client data.
+- Sanitize AI proxy request bodies — strip any `Authorization` header or API key fields the client might inject.
+- Rate-limit all endpoints, especially AI and auth.
+- Use parameterized queries (Prisma handles this).
+- Never log passwords, tokens, or API keys (configure Pino redaction).
+
+## Testing
+
+- Use **Vitest** as test runner and **Supertest** for HTTP assertions.
+- Mirror `src/` structure in `tests/` (e.g., `tests/services/drink.test.ts`).
+- Mock Prisma with `vitest.mock()` — test services in isolation from the database.
+- Integration tests use a separate test database (configured via `DATABASE_URL` in `.env.test`).
+- Name tests descriptively: `'POST /drinks returns 201 and creates a log'`.
+- Test error cases: invalid input (400), unauthorized (401), not found (404), rate limited (429).
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+
+import { app } from '../src/app.js';
+
+describe('POST /drinks', () => {
+  it('returns 401 without auth token', async () => {
+    const res = await request(app).post('/drinks').send({ ml: 250 });
+    expect(res.status).toBe(401);
+  });
+});
+```
+
+## Logging
+
+- Use `pino-http` as Express middleware for automatic request/response logging.
+- Log levels: `fatal` > `error` > `warn` > `info` > `debug` > `trace`.
+- Use `info` for normal operations, `warn` for recoverable issues, `error` for failures.
+- Redact sensitive fields: `['req.headers.authorization', 'req.body.password']`.
+- In development, pipe through `pino-pretty` for readable output.
+- In production, output JSON for structured log aggregation.
+
+## Docker & Deployment
+
+- `docker-compose.yml` defines PostgreSQL and Redis for local development.
+- `Dockerfile` uses multi-stage build: `node:20-alpine` base, build TypeScript, copy only dist + node_modules to final image.
+- Health check: `GET /health` returns `{ "status": "ok", "timestamp": "..." }`.
+- Graceful shutdown: handle `SIGTERM` to close the HTTP server, Prisma, and Redis connections.
+
+## Anti-Patterns to Avoid
+
+- Putting business logic in route handlers — use services.
+- Using `any` without justification.
+- Accessing `process.env` directly — always go through `config/env.ts`.
+- Catching errors silently — always log or re-throw.
+- Returning raw Prisma errors to clients — wrap in `AppError`.
+- Using `setTimeout` or `setInterval` for scheduled tasks — use a proper job queue if needed.
+- Storing secrets in code or committing `.env` files.
+- Creating circular dependencies between modules.
+- Over-abstracting — no repository pattern, no use-case classes. Routes → services → Prisma is enough.

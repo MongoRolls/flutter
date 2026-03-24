@@ -24,7 +24,17 @@
       "Bash(skills search:*)",
       "Bash(skills list:*)",
       "Bash(skills add:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git diff:*)",
+      "Bash(dart analyze:*)",
+      "Bash(npx tsc:*)",
+      "Bash(podman ps:*)",
+      "Bash(curl:*)",
+      "Bash(lsof -ti:3000)",
+      "Bash(podman compose:*)",
+      "Bash(python3 -m json.tool)",
+      "Bash(xargs ps:*)",
+      "WebFetch(domain:api-docs.deepseek.com)"
     ]
   }
 }

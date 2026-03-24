@@ -3,6 +3,10 @@
 > Project-specific decisions and constraints. For architecture details see `CLAUDE.md`.
 > For Dart style see `.cursor/rules/dart-style.mdc`.
 
+## Language
+
+Always respond in Chinese. 所有回复、注释说明、commit message、文档内容均使用中文。代码标识符（变量名、函数名、类名）保持英文。
+
 ## Architecture Decisions
 
 - **State management**: `ChangeNotifier` with manual `addListener` — no Provider/BLoC/Riverpod packages. Keep it simple.

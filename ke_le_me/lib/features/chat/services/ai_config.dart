@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/services/backend_api_service.dart';
+
 class AiConfig {
   static const _envApiKey =
       String.fromEnvironment('DEEPSEEK_API_KEY');
 
-  static const _builtinKey = 'sk-b2a0eee592f645ea91103f921bf358e0';
-
   static const _prefsKey = 'deepseek_api_key';
+  static const _useBackendKey = 'ai_use_backend_proxy';
 
   final String baseUrl;
   final String apiKey;
@@ -15,6 +16,7 @@ class AiConfig {
   final double temperature;
   final int maxTokens;
   final String keySource;
+  final bool useBackendProxy;
 
   const AiConfig({
     this.baseUrl = 'https://api.deepseek.com',
@@ -23,30 +25,47 @@ class AiConfig {
     this.temperature = 0.7,
     this.maxTokens = 2048,
     this.keySource = 'none',
+    this.useBackendProxy = false,
   });
 
-  /// Priority: --dart-define > SharedPreferences > built-in key.
+  /// Priority:
+  /// 1. Backend proxy (if enabled and backend is authenticated)
+  /// 2. --dart-define
+  /// 3. SharedPreferences
+  /// 4. Built-in key (fallback)
   static Future<AiConfig> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final useProxy = prefs.getBool(_useBackendKey) ?? true;
+    final backend = BackendApiService.instance;
+
+    if (useProxy && backend.isAuthenticated) {
+      debugPrint('AiConfig: source=backend-proxy');
+      return AiConfig(
+        baseUrl: '${backend.baseUrl}/api/ai',
+        apiKey: '',
+        keySource: 'backend-proxy',
+        useBackendProxy: true,
+      );
+    }
+
     String key;
     String source;
     if (_envApiKey.isNotEmpty) {
       key = _envApiKey;
       source = 'dart-define';
     } else {
-      final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_prefsKey) ?? '';
-      if (saved.isNotEmpty) {
-        key = saved;
-        source = 'saved';
-      } else {
-        key = _builtinKey;
-        source = 'builtin';
-      }
+      key = saved;
+      source = saved.isNotEmpty ? 'saved' : 'none';
     }
-    final masked = key.length > 8
-        ? '${key.substring(0, 5)}...${key.substring(key.length - 4)}'
-        : '***';
-    debugPrint('AiConfig: source=$source, key=$masked');
+    if (key.isNotEmpty) {
+      final masked = key.length > 8
+          ? '${key.substring(0, 5)}...${key.substring(key.length - 4)}'
+          : '***';
+      debugPrint('AiConfig: source=$source, key=$masked');
+    } else {
+      debugPrint('AiConfig: source=$source (no API key — backend proxy required)');
+    }
     return AiConfig(apiKey: key, keySource: source);
   }
 
@@ -60,5 +79,10 @@ class AiConfig {
     return prefs.getString(_prefsKey) ?? '';
   }
 
-  bool get hasApiKey => apiKey.isNotEmpty;
+  static Future<void> setUseBackendProxy(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_useBackendKey, value);
+  }
+
+  bool get hasApiKey => apiKey.isNotEmpty || useBackendProxy;
 }

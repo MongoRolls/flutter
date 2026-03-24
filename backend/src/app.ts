@@ -1,0 +1,45 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import pinoHttp from 'pino-http';
+
+import { env } from './config/env.js';
+import { logger } from './config/logger.js';
+import { errorHandler } from './middleware/error-handler.js';
+import healthRouter from './routes/health.routes.js';
+import authRouter from './routes/auth.routes.js';
+import profileRouter from './routes/profile.routes.js';
+import drinkLogsRouter from './routes/drink-logs.routes.js';
+import plansRouter from './routes/plans.routes.js';
+import memoryRouter from './routes/memory.routes.js';
+import sessionsRouter from './routes/sessions.routes.js';
+import aiRouter from './routes/ai.routes.js';
+import careRouter from './routes/care.routes.js';
+
+export const app = express();
+
+// ── 安全与基础中间件 ──────────────────────────────────────────────────────────
+app.use(helmet());
+app.use(
+  cors({
+    origin: env.NODE_ENV === 'production' ? env.CORS_ORIGIN.split(',') : '*',
+    credentials: true,
+  }),
+);
+app.use(pinoHttp({ logger }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// ── 路由 ──────────────────────────────────────────────────────────────────────
+app.use('/health', healthRouter);
+app.use('/auth', authRouter);
+app.use('/api/profile', profileRouter);
+app.use('/api/drink-logs', drinkLogsRouter);
+app.use('/api/plans', plansRouter);
+app.use('/api/memory', memoryRouter);
+app.use('/api/sessions', sessionsRouter);
+app.use('/api/ai', aiRouter);
+app.use('/api/care', careRouter);
+
+// ── 全局错误处理（必须在所有路由之后）────────────────────────────────────────
+app.use(errorHandler);

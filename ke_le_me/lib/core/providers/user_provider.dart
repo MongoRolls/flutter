@@ -8,6 +8,7 @@ import '../models/drink_log.dart';
 import '../models/drink_preset.dart';
 import '../models/user_profile.dart';
 import '../models/weather_data.dart';
+import '../services/backend_api_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../utils/goal_predictor.dart';
@@ -94,6 +95,17 @@ class UserProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_profile', jsonEncode(_profile.toMap()));
     notifyListeners();
+    // 异步同步到后端（不阻塞 UI）
+    final backend = BackendApiService.instance;
+    if (backend.isAuthenticated) {
+      () async {
+        try {
+          await backend.updateProfile(_profile.toMap());
+        } catch (e) {
+          debugPrint('Profile sync failed: $e');
+        }
+      }();
+    }
   }
 
   void updateProfile(UserProfile newProfile) {
@@ -190,6 +202,23 @@ class UserProvider extends ChangeNotifier {
     _monthlyHits[day] = _todayMl;
     await _saveMonthlyHits(prefs);
     _computeStreak(prefs);
+
+    // 异步同步到后端（不阻塞 UI）
+    final backend = BackendApiService.instance;
+    if (backend.isAuthenticated) {
+      () async {
+        try {
+          await backend.createDrinkLog(
+            ml: ml,
+            icon: type,
+            description: desc,
+            loggedAt: now,
+          );
+        } catch (e) {
+          debugPrint('DrinkLog sync failed: $e');
+        }
+      }();
+    }
 
     notifyListeners();
   }
