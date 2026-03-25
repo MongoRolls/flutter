@@ -78,11 +78,7 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
       }
     }
 
-    return {
-      'health': health,
-      'preference': pref,
-      'event': events,
-    };
+    return {'health': health, 'preference': pref, 'event': events};
   }
 
   Widget _buildHeader() {
@@ -95,7 +91,7 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
             color: AppColors.shadow,
             blurRadius: 8,
             offset: Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -147,8 +143,11 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
               color: AppColors.blueLight,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.folder_open_outlined,
-                size: 36, color: AppColors.blue),
+            child: const Icon(
+              Icons.folder_open_outlined,
+              size: 36,
+              color: AppColors.blue,
+            ),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -163,7 +162,11 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
           const Text(
             '和 AI 助手多聊聊，它会自动记住\n你的健康信息和偏好习惯',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.textHint, height: 1.6),
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textHint,
+              height: 1.6,
+            ),
           ),
         ],
       ),
@@ -221,8 +224,11 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
                       color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.delete_outline,
-                        color: Colors.red, size: 20),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
                   ),
                   child: _buildFactTile(fact),
                 ),
@@ -246,7 +252,11 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
           if (isImportant)
             const Padding(
               padding: EdgeInsets.only(top: 2, right: 6),
-              child: Icon(Icons.star_rounded, size: 14, color: AppColors.orange),
+              child: Icon(
+                Icons.star_rounded,
+                size: 14,
+                color: AppColors.orange,
+              ),
             )
           else
             const SizedBox(width: 20),
@@ -266,20 +276,27 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
                 Row(
                   children: [
                     if (fact.expiresAt != null) ...[
-                      const Icon(Icons.schedule_outlined,
-                          size: 11, color: AppColors.textHint),
+                      const Icon(
+                        Icons.schedule_outlined,
+                        size: 11,
+                        color: AppColors.textHint,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         '到期 ${_formatDate(fact.expiresAt!)}',
                         style: const TextStyle(
-                            fontSize: 10, color: AppColors.textHint),
+                          fontSize: 10,
+                          color: AppColors.textHint,
+                        ),
                       ),
                       const SizedBox(width: 8),
                     ],
                     Text(
                       dateStr,
                       style: const TextStyle(
-                          fontSize: 10, color: AppColors.textHint),
+                        fontSize: 10,
+                        color: AppColors.textHint,
+                      ),
                     ),
                   ],
                 ),
@@ -296,11 +313,14 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('删除记录',
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary)),
+        title: const Text(
+          '删除记录',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
         content: Text(
           '确定删除「${fact.content.length > 20 ? '${fact.content.substring(0, 20)}…' : fact.content}」？',
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
@@ -308,8 +328,10 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              '取消',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -320,7 +342,12 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
     );
 
     if (confirmed == true) {
-      await MemoryService.instance.deleteFact(fact.id);
+      try {
+        await MemoryService.instance.deleteFact(fact.id);
+      } catch (e) {
+        debugPrint('Error deleting fact: $e');
+      }
+      if (!mounted) return false;
       _loadFacts();
       return true;
     }

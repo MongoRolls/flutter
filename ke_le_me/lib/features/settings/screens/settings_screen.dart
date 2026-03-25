@@ -71,18 +71,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _p.updateProfile(profile);
 
     // 根据通知开关状态调度或取消通知
-    if (_notificationsEnabled) {
-      final granted = await NotificationService.instance.requestPermission();
-      if (granted) {
-        await NotificationService.instance.scheduleReminders(
-          wakeTime: _wakeTime,
-          bedTime: _bedTime,
-          intervalMin: _intervalMin,
-          reminderStyle: _reminderStyle,
-        );
+    try {
+      if (_notificationsEnabled) {
+        final granted = await NotificationService.instance.requestPermission();
+        if (!mounted) return;
+        if (granted) {
+          await NotificationService.instance.scheduleReminders(
+            wakeTime: _wakeTime,
+            bedTime: _bedTime,
+            intervalMin: _intervalMin,
+            reminderStyle: _reminderStyle,
+          );
+          if (!mounted) return;
+        }
+      } else {
+        await NotificationService.instance.cancelAll();
+        if (!mounted) return;
       }
-    } else {
-      await NotificationService.instance.cancelAll();
+    } catch (e) {
+      debugPrint('Error updating notifications: $e');
+      if (!mounted) return;
     }
 
     if (mounted) {
@@ -685,9 +693,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showTestReminder() async {
-    await NotificationService.instance.showTestNotification(
-      reminderStyle: _reminderStyle,
-    );
+    try {
+      await NotificationService.instance.showTestNotification(
+        reminderStyle: _reminderStyle,
+      );
+    } catch (e) {
+      debugPrint('Error showing test notification: $e');
+    }
   }
 
   void _onVersionTap() {

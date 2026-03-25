@@ -56,12 +56,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _enableNotificationsAndFinish() async {
-    await NotificationService.instance.requestPermission();
-    await NotificationService.instance.scheduleReminders(
-      wakeTime: _wakeTime,
-      bedTime: _bedTime,
-      intervalMin: _reminderInterval,
-    );
+    try {
+      final granted = await NotificationService.instance.requestPermission();
+      if (!mounted) return;
+      if (granted) {
+        await NotificationService.instance.scheduleReminders(
+          wakeTime: _wakeTime,
+          bedTime: _bedTime,
+          intervalMin: _reminderInterval,
+        );
+        if (!mounted) return;
+      }
+    } catch (e) {
+      debugPrint('Error enabling notifications: $e');
+      if (!mounted) return;
+    }
     await _finishOnboarding();
   }
 

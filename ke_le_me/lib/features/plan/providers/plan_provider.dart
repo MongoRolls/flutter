@@ -291,8 +291,12 @@ class PlanProvider extends ChangeNotifier {
   Future<int> scheduleSlotReminders() async {
     if (todayPlan == null) return 0;
 
-    // 1. 取消 ID 范围 1000-1999 的计划提醒
-    await NotificationService.instance.cancelPlanReminders();
+    try {
+      // 1. 取消 ID 范围 1000-1999 的计划提醒
+      await NotificationService.instance.cancelPlanReminders();
+    } catch (e) {
+      debugPrint('Error cancelling plan reminders: $e');
+    }
 
     // 2. 只为未来时间点安排通知
     final now = DateTime.now();
@@ -315,13 +319,17 @@ class PlanProvider extends ChangeNotifier {
         continue;
       }
       if (dt.isAfter(now)) {
-        await NotificationService.instance.scheduleCustomReminder(
-          title: '${slot.note}（${slot.ml}ml）',
-          scheduledDate: dt,
-          repeat: 'none',
-          id: 1000 + i,
-        );
-        scheduled++;
+        try {
+          await NotificationService.instance.scheduleCustomReminder(
+            title: '${slot.note}（${slot.ml}ml）',
+            scheduledDate: dt,
+            repeat: 'none',
+            id: 1000 + i,
+          );
+          scheduled++;
+        } catch (e) {
+          debugPrint('Error scheduling reminder for slot ${slot.time}: $e');
+        }
       }
     }
     return scheduled;
