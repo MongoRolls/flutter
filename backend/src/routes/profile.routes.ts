@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { prisma } from '../config/prisma.js';
+import * as ProfileService from '../services/profile.service.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -28,11 +28,8 @@ const updateProfileSchema = z.object({
 router.get('/', auth, async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const [user, profile] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { id: true, nickname: true, email: true, createdAt: true } }),
-      prisma.userProfile.findUnique({ where: { userId } }),
-    ]);
-    res.json({ user, profile });
+    const result = await ProfileService.getProfile(userId);
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -42,18 +39,8 @@ router.get('/', auth, async (req, res, next) => {
 router.put('/', auth, validate(updateProfileSchema), async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const { nickname, ...profileFields } = req.body;
-
-    const [user, profile] = await Promise.all([
-      nickname ? prisma.user.update({ where: { id: userId }, data: { nickname } }) : prisma.user.findUnique({ where: { id: userId } }),
-      prisma.userProfile.upsert({
-        where: { userId },
-        update: profileFields,
-        create: { userId, ...profileFields },
-      }),
-    ]);
-
-    res.json({ user, profile });
+    const result = await ProfileService.updateProfile(userId, req.body);
+    res.json(result);
   } catch (err) {
     next(err);
   }

@@ -11,9 +11,15 @@ KeLeME (渴了么) AI 饮水提醒 App 后端服务。基于 **Node.js 20 + Expr
 - [环境变量配置](#环境变量配置)
 - [数据库管理](#数据库管理)
 - [可用脚本](#可用脚本)
-- [Docker 生产部署](#docker-生产部署)
 - [项目结构](#项目结构)
 - [API 概览](#api-概览)
+- [部署](#部署)
+  - [PM2 部署（推荐）](#pm2-部署推荐)
+  - [Docker 部署](#docker-部署)
+  - [生产环境完整流程](#生产环境完整流程)
+- [监控与运维](#监控与运维)
+- [常见问题](#常见问题)
+- [开发进度](#开发进度)
 
 ---
 
@@ -23,9 +29,10 @@ KeLeME (渴了么) AI 饮水提醒 App 后端服务。基于 **Node.js 20 + Expr
 | ---------- | -------- | ---------------------------- |
 | Node.js    | 20 LTS   | 推荐使用 `nvm` 管理版本     |
 | npm        | 9+       | 随 Node.js 附带             |
-| Docker｜Podman | 20+  | 用于运行 PostgreSQL 和 Redis |
+| Docker/Podman | 20+   | 用于运行 PostgreSQL 和 Redis |
 | PostgreSQL | 16       | 通过 Docker 或系统安装       |
 | Redis      | 7        | 通过 Docker 或系统安装       |
+| PM2        | 5+       | 生产部署进程管理（可选）     |
 
 ---
 
@@ -58,11 +65,15 @@ npm install
 
 ### 3. 配置环境变量
 
-复制 `.env` 模板并按需修改（详见 [环境变量配置](#环境变量配置)）：
+```bash
+cp .env.example .env
+# 编辑 .env，填入实际的 JWT 密钥和 DeepSeek API Key
+```
+
+生成 JWT 密钥：
 
 ```bash
-cp .env.example .env   # 如果有 .env.example
-# 或直接编辑 .env
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ### 4. 初始化数据库
@@ -91,6 +102,7 @@ npm run dev
 
 ```bash
 curl http://localhost:3000/health
+# {"status":"ok","timestamp":"...","service":"keleme-backend"}
 ```
 
 ---
@@ -99,7 +111,7 @@ curl http://localhost:3000/health
 
 所有环境变量在启动时通过 Zod 进行严格校验，缺少或格式错误会导致进程立即退出。
 
-在 `backend/.env` 中配置：
+模板文件：`.env.example`
 
 ```bash
 # ── 服务器配置 ─────────────────────────────────────────
@@ -113,8 +125,7 @@ DATABASE_URL="postgresql://keleme:keleme_dev_password@localhost:5432/keleme_db"
 REDIS_URL="redis://localhost:6379"
 
 # ── JWT 密钥 ───────────────────────────────────────────
-# 最少 32 字符。生产环境请使用强随机值：
-#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# 最少 32 字符。生产环境请使用强随机值
 JWT_SECRET="<your-256-bit-hex>"
 JWT_REFRESH_SECRET="<your-256-bit-hex>"
 
@@ -124,7 +135,7 @@ DEEPSEEK_API_KEY="sk-your-api-key"
 
 # ── CORS ───────────────────────────────────────────────
 # 允许的前端来源，默认 *。生产环境填写具体域名
-CORS_ORIGIN="http://localhost:3000"
+CORS_ORIGIN="*"
 ```
 
 ### 变量校验规则
@@ -192,93 +203,20 @@ npm run db:reset
 
 ---
 
-## Docker 生产部署
-
-### 使用 Dockerfile 构建镜像
-
-```bash
-cd backend
-
-# 构建镜像
-docker build -t keleme-backend .
-
-# 运行容器
-docker run -d \
-  --name keleme-api \
-  -p 3000:3000 \
-  --env-file .env \
-  keleme-backend
-```
-
-Dockerfile 采用多阶段构建：
-
-1. **builder 阶段** - 安装所有依赖，生成 Prisma Client，编译 TypeScript
-2. **runner 阶段** - 仅安装生产依赖，复制编译产物，暴露端口 3000
-
-内置健康检查：每 30 秒请求 `GET /health`。
-
-### 使用 docker-compose 一键部署（开发）
-
-```bash
-# 启动 PostgreSQL + Redis
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
-
-# 停止并清除数据卷
-docker-compose down -v
-```
-
-### 生产部署完整流程
-
-```bash
-# 1. 准备 .env 文件（使用生产配置）
-cp .env .env.production
-# 编辑 .env.production，设置：
-#   NODE_ENV=production
-#   DATABASE_URL=<生产数据库连接>
-#   JWT_SECRET=<新的随机密钥>
-#   JWT_REFRESH_SECRET=<新的随机密钥>
-#   DEEPSEEK_API_KEY=<API 密钥>
-#   CORS_ORIGIN=https://your-domain.com
-
-# 2. 构建镜像
-docker build -t keleme-backend:latest .
-
-# 3. 运行数据库迁移（在生产数据库上）
-npx prisma migrate deploy
-
-# 4. 启动服务
-docker run -d \
-  --name keleme-api \
-  -p 3000:3000 \
-  --env-file .env.production \
-  --restart unless-stopped \
-  keleme-backend:latest
-```
-
-> **注意**：生产环境使用 `prisma migrate deploy` 而非 `prisma migrate dev`，前者只执行已有迁移，不会创建新迁移。
-
----
-
 ## 项目结构
 
 ```
 backend/
 ├── prisma/
-│   ├── schema.prisma              # 数据模型定义
+│   ├── schema.prisma              # 数据模型定义（7 个模型）
 │   └── migrations/                # 数据库迁移文件
 ├── src/
-│   ├── index.ts                   # 入口：启动服务器，优雅关闭
-│   ├── app.ts                     # Express 实例，中间件 + 路由挂载
+│   ├── index.ts                   # 入口：启动服务器，优雅关闭（SIGTERM/SIGINT）
+│   ├── app.ts                     # Express 实例，中间件 + 9 组路由挂载
 │   ├── config/
 │   │   ├── env.ts                 # Zod 环境变量校验
 │   │   ├── prisma.ts              # PrismaClient 单例
-│   │   ├── redis.ts               # ioredis 实例
+│   │   ├── redis.ts               # ioredis 实例（lazy connect）
 │   │   └── logger.ts              # Pino 日志（开发环境 pino-pretty）
 │   ├── middleware/
 │   │   ├── auth.ts                # JWT Bearer Token 验证
@@ -287,27 +225,30 @@ backend/
 │   │   └── error-handler.ts       # 全局错误处理 -> JSON 响应
 │   ├── routes/
 │   │   ├── health.routes.ts       # GET /health
-│   │   ├── auth.routes.ts         # /auth/*
+│   │   ├── auth.routes.ts         # /auth/* (5 个端点)
 │   │   ├── profile.routes.ts      # /api/profile
-│   │   ├── drink-logs.routes.ts   # /api/drink-logs
+│   │   ├── drink-logs.routes.ts   # /api/drink-logs (含批量同步)
 │   │   ├── plans.routes.ts        # /api/plans
 │   │   ├── memory.routes.ts       # /api/memory
 │   │   ├── sessions.routes.ts     # /api/sessions
 │   │   ├── ai.routes.ts           # /api/ai/chat (SSE 流式代理)
 │   │   └── care.routes.ts         # /api/care/contacts
 │   ├── services/
-│   │   └── auth.service.ts        # 认证业务逻辑
+│   │   └── auth.service.ts        # 认证业务逻辑（设备登录/邮箱绑定/JWT 刷新/登出）
 │   ├── utils/
-│   │   ├── jwt.ts                 # JWT 签发 / 验证
-│   │   ├── password.ts            # bcrypt 哈希 / 校验
-│   │   └── errors.ts              # AppError 错误体系
+│   │   ├── jwt.ts                 # JWT 签发 / 验证（access 15min, refresh 7d）
+│   │   ├── password.ts            # bcrypt 哈希 / 校验（cost 12）
+│   │   └── errors.ts              # AppError 错误体系（6 种错误类）
 │   └── types/
-│       └── index.ts               # TypeScript 类型定义
+│       └── index.ts               # AuthenticatedRequest 类型定义
+├── ecosystem.config.cjs           # PM2 进程管理配置
 ├── docker-compose.yml             # 开发环境 PostgreSQL + Redis
+├── docker-compose.prod.yml        # 生产环境全栈部署（App + DB + Redis）
 ├── Dockerfile                     # 生产多阶段构建
+├── .env.example                   # 环境变量模板
 ├── package.json
 ├── tsconfig.json
-└── .env                           # 环境变量（不要提交到 Git）
+└── plan.md                        # 架构设计文档
 ```
 
 ---
@@ -386,11 +327,342 @@ backend/
 
 ---
 
+## 部署
+
+支持三种部署方式，按推荐程度排列：
+
+1. **PM2 部署** — 适合 VPS / 云主机，简单高效，推荐首选
+2. **Docker 部署** — 适合容器化环境
+3. **Docker Compose 全栈部署** — 一键拉起所有服务
+
+### PM2 部署（推荐）
+
+PM2 是 Node.js 生产环境进程管理器，提供自动重启、负载均衡、日志管理和监控。
+
+#### 前置准备
+
+```bash
+# 全局安装 PM2
+npm install -g pm2
+
+# 服务器上安装 PostgreSQL 16 和 Redis 7（或用 Docker）
+docker-compose up -d   # 启动 DB + Redis
+```
+
+#### 首次部署
+
+```bash
+cd backend
+
+# 1. 安装依赖
+npm ci --omit=dev
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env，设置生产配置：
+#   NODE_ENV=production
+#   DATABASE_URL=<生产数据库连接>
+#   JWT_SECRET=<强随机密钥>
+#   JWT_REFRESH_SECRET=<强随机密钥>
+#   DEEPSEEK_API_KEY=<API 密钥>
+#   CORS_ORIGIN=https://your-domain.com
+
+# 3. 生成 Prisma Client 并执行迁移
+npx prisma generate
+npx prisma migrate deploy
+
+# 4. 编译 TypeScript
+npm run build
+
+# 5. 启动 PM2
+pm2 start ecosystem.config.cjs --env production
+
+# 6. 保存进程列表（服务器重启后自动恢复）
+pm2 save
+
+# 7. 设置开机自启
+pm2 startup
+# 按照输出的命令执行（通常需要 sudo）
+```
+
+#### 更新部署
+
+```bash
+cd backend
+
+# 拉取最新代码
+git pull origin main
+
+# 安装依赖（如有变化）
+npm ci --omit=dev
+
+# 执行数据库迁移（如有变化）
+npx prisma generate
+npx prisma migrate deploy
+
+# 重新编译
+npm run build
+
+# 零停机重载（cluster 模式下逐个重启实例）
+pm2 reload ecosystem.config.cjs --env production
+```
+
+#### PM2 常用命令
+
+```bash
+# ── 进程管理 ─────────────────────────────────────────────
+pm2 list                          # 查看所有进程状态
+pm2 show keleme-api               # 查看详细信息
+pm2 restart keleme-api            # 重启（有短暂停机）
+pm2 reload keleme-api             # 零停机重载（推荐）
+pm2 stop keleme-api               # 停止
+pm2 delete keleme-api             # 删除进程
+
+# ── 日志 ─────────────────────────────────────────────────
+pm2 logs keleme-api               # 实时查看日志
+pm2 logs keleme-api --lines 100   # 查看最近 100 行
+pm2 flush                         # 清空所有日志
+
+# ── 监控 ─────────────────────────────────────────────────
+pm2 monit                         # 终端实时监控面板
+pm2 plus                          # PM2 Plus 在线监控（可选）
+
+# ── 集群管理 ─────────────────────────────────────────────
+pm2 scale keleme-api 4            # 扩展到 4 个实例
+pm2 scale keleme-api +2           # 增加 2 个实例
+```
+
+#### PM2 配置说明
+
+配置文件 `ecosystem.config.cjs` 关键参数：
+
+| 参数               | 值         | 说明                               |
+| ------------------ | ---------- | ---------------------------------- |
+| `instances`        | `'max'`    | 按 CPU 核心数自动扩展             |
+| `exec_mode`        | `'cluster'`| 多进程负载均衡                     |
+| `max_memory_restart` | `'512M'` | 内存超限自动重启                   |
+| `restart_delay`    | `5000`     | 重启间隔 5 秒，避免频繁重启       |
+| `max_restarts`     | `10`       | 最大连续重启次数                   |
+| `kill_timeout`     | `10000`    | 优雅关闭超时（与 index.ts 一致）   |
+| `merge_logs`       | `true`     | 多实例日志合并到同一文件           |
+
+> **SSE 注意**：AI 聊天接口使用 SSE 流式传输。如果在 cluster 模式下遇到 SSE 连接问题，可以在 `ecosystem.config.cjs` 中将 `exec_mode` 改为 `'fork'`，`instances` 改为 `1`。
+
+#### PM2 + Nginx 反向代理
+
+生产环境推荐在 PM2 前面加 Nginx 做反向代理：
+
+```nginx
+upstream keleme_api {
+    # PM2 cluster 模式只监听一个端口，Nginx 直接转发即可
+    server 127.0.0.1:3000;
+    keepalive 64;
+}
+
+server {
+    listen 80;
+    server_name api.keleme.example.com;
+
+    # 强制 HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.keleme.example.com;
+
+    ssl_certificate     /etc/ssl/certs/keleme.pem;
+    ssl_certificate_key /etc/ssl/private/keleme.key;
+
+    # 安全头
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+
+    location / {
+        proxy_pass http://keleme_api;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # SSE 流式接口 — 禁用缓冲
+    location /api/ai/chat {
+        proxy_pass http://keleme_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding off;
+        proxy_read_timeout 300s;   # SSE 长连接超时
+    }
+}
+```
+
+### Docker 部署
+
+#### 构建镜像
+
+```bash
+cd backend
+
+# 构建镜像
+docker build -t keleme-backend .
+
+# 运行容器
+docker run -d \
+  --name keleme-api \
+  -p 3000:3000 \
+  --env-file .env \
+  --restart unless-stopped \
+  keleme-backend
+```
+
+Dockerfile 采用多阶段构建：
+
+1. **builder 阶段** - 安装所有依赖，生成 Prisma Client，编译 TypeScript
+2. **runner 阶段** - 仅安装生产依赖，复制编译产物，暴露端口 3000
+
+内置健康检查：每 30 秒请求 `GET /health`。
+
+#### Docker Compose 开发环境
+
+```bash
+# 启动 PostgreSQL + Redis
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+
+# 停止并清除数据卷
+docker-compose down -v
+```
+
+#### Docker Compose 生产全栈部署
+
+使用 `docker-compose.prod.yml` 一键部署完整服务栈：
+
+```bash
+# 配置生产环境变量
+cp .env.example .env
+# 编辑 .env 设置生产配置
+
+# 启动全部服务（API + PostgreSQL + Redis）
+docker-compose -f docker-compose.prod.yml up -d
+
+# 执行数据库迁移
+docker-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
+
+# 查看日志
+docker-compose -f docker-compose.prod.yml logs -f api
+
+# 查看状态
+docker-compose -f docker-compose.prod.yml ps
+```
+
+### 生产环境完整流程
+
+无论使用哪种部署方式，生产环境都需要完成以下步骤：
+
+```bash
+# 1. 准备环境变量
+cp .env.example .env
+# 编辑 .env，设置：
+#   NODE_ENV=production
+#   DATABASE_URL=<生产数据库连接字符串>
+#   REDIS_URL=<生产 Redis 连接字符串>
+#   JWT_SECRET=<node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
+#   JWT_REFRESH_SECRET=<同上，再生成一个>
+#   DEEPSEEK_API_KEY=<sk-your-key>
+#   CORS_ORIGIN=https://your-domain.com
+
+# 2. 数据库迁移（生产环境用 deploy 而非 dev）
+npx prisma migrate deploy
+
+# 3. 启动服务（选其一）
+pm2 start ecosystem.config.cjs --env production    # PM2
+# 或
+docker-compose -f docker-compose.prod.yml up -d     # Docker
+```
+
+> **注意**：生产环境使用 `prisma migrate deploy` 而非 `prisma migrate dev`，前者只执行已有迁移，不会创建新迁移。
+
+### 部署方式对比
+
+| 特性             | PM2              | Docker           | Docker Compose 全栈 |
+| ---------------- | ---------------- | ---------------- | -------------------- |
+| 适用场景         | VPS / 云主机     | 容器化平台       | 快速搭建完整环境     |
+| 零停机更新       | `pm2 reload`     | 需配合编排工具   | `docker-compose up -d` |
+| 多实例负载均衡   | cluster 模式     | 需外部 LB        | 需外部 LB            |
+| 日志管理         | 内置             | Docker logs      | Docker logs          |
+| 监控             | `pm2 monit` / Plus | 需额外工具      | 需额外工具           |
+| 开机自启         | `pm2 startup`    | `--restart`      | `restart: unless-stopped` |
+| 学习成本         | 低               | 中               | 中                   |
+
+---
+
+## 监控与运维
+
+### 健康检查
+
+```bash
+# HTTP 健康检查
+curl http://localhost:3000/health
+
+# Docker 内置健康检查（Dockerfile 已配置）
+docker inspect --format='{{.State.Health.Status}}' keleme-api
+
+# PM2 进程状态
+pm2 show keleme-api
+```
+
+### 日志查看
+
+```bash
+# PM2 日志
+pm2 logs keleme-api               # 实时
+pm2 logs keleme-api --lines 200   # 最近 200 行
+
+# Docker 日志
+docker logs -f keleme-api         # 实时
+docker logs --tail 200 keleme-api # 最近 200 行
+
+# 日志文件位置（PM2）
+# logs/out.log    — 标准输出
+# logs/error.log  — 错误日志
+```
+
+### 数据库备份
+
+```bash
+# 导出数据库
+pg_dump -U keleme -d keleme_db > backup_$(date +%Y%m%d).sql
+
+# Docker 环境导出
+docker exec keleme_postgres pg_dump -U keleme -d keleme_db > backup_$(date +%Y%m%d).sql
+
+# 恢复数据库
+psql -U keleme -d keleme_db < backup_20260326.sql
+```
+
+---
+
 ## 常见问题
 
 ### 启动报错 "环境变量校验失败"
 
 确认 `.env` 文件存在且所有必填变量格式正确。特别注意：
+
 - `DATABASE_URL` 和 `REDIS_URL` 必须是合法 URL
 - `JWT_SECRET` 和 `JWT_REFRESH_SECRET` 至少 32 字符
 - `DEEPSEEK_API_KEY` 必须以 `sk-` 开头
@@ -417,6 +689,37 @@ lsof -i :3000
 # 或修改 .env 中的 PORT 值
 ```
 
+### PM2 进程启动失败
+
+```bash
+# 查看错误日志
+pm2 logs keleme-api --err --lines 50
+
+# 常见原因：
+# 1. dist/ 目录不存在 → 先运行 npm run build
+# 2. .env 配置错误 → 检查环境变量
+# 3. 数据库未迁移 → 运行 npx prisma migrate deploy
+# 4. 端口被占用 → 检查 lsof -i :3000
+
+# 强制重启
+pm2 delete keleme-api
+pm2 start ecosystem.config.cjs --env production
+```
+
+### PM2 cluster 模式下 SSE 异常
+
+如果 AI 聊天接口的 SSE 流式响应在 cluster 模式下不稳定：
+
+```bash
+# 方案 1：改为 fork 模式
+# 编辑 ecosystem.config.cjs:
+#   exec_mode: 'fork'
+#   instances: 1
+
+# 方案 2：使用 Nginx sticky session
+# 在 upstream 配置中添加 ip_hash
+```
+
 ### 重置开发环境
 
 ```bash
@@ -428,3 +731,18 @@ docker-compose down -v
 docker-compose up -d
 npm run db:migrate
 ```
+
+---
+
+## 开发进度
+
+| 阶段 | 内容 | 状态 |
+| ---- | ---- | ---- |
+| Phase 1 | 基础骨架（Express + Prisma + 中间件 + 健康检查） | ✅ 已完成 |
+| Phase 2 | Auth（设备登录 + 邮箱绑定 + JWT + 登出） | ✅ 已完成 |
+| Phase 3 | AI Proxy（SSE 流式代理 + 限流） | ✅ 已完成 |
+| Phase 4 | 数据 CRUD（DrinkLog + Profile + Memory + Plan + Session + Care） | ✅ 已完成 |
+| Phase 5 | 同步（Push / Pull + 冲突解决 + Flutter 同步队列） | 🔲 待开发 |
+| Phase 6 | 社区（真实社交关系 + 排行榜 + FCM 推送） | 🔲 待开发 |
+
+详细架构设计见 `plan.md`。

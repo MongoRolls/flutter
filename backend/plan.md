@@ -476,29 +476,31 @@ class AuthService {
 - [x] 工具类 (jwt, password, errors)
 - [x] 配置层 (env, prisma, redis, logger)
 
-### Phase 2 — Auth (1-2 天)
+### Phase 2 — Auth ✅ 已完成
 
-- [ ] `POST /auth/device` — 设备匿名登录（首次自动创建用户）
-- [ ] `POST /auth/bind-email` — 可选绑定邮箱 + 密码
-- [ ] `POST /auth/login` — 邮箱密码登录（换设备找回）
-- [ ] `POST /auth/refresh` — Token 刷新
-- [ ] `POST /auth/logout` — 登出（Redis 黑名单）
-- [ ] Prisma migration: User 表加 `deviceId`，`passwordHash` 改可选
+- [x] `POST /auth/device` — 设备匿名登录（首次自动创建用户）
+- [x] `POST /auth/bind-email` — 可选绑定邮箱 + 密码
+- [x] `POST /auth/login` — 邮箱密码登录（换设备找回）
+- [x] `POST /auth/refresh` — Token 刷新
+- [x] `POST /auth/logout` — 登出（Redis 黑名单）
+- [x] Prisma migration: User 表加 `deviceId`，`passwordHash` 改可选
 - [ ] 测试
 
-### Phase 3 — AI Proxy (1-2 天)
+### Phase 3 — AI Proxy ✅ 已完成
 
-- [ ] SSE streaming proxy
-- [ ] Rate limiting
+- [x] SSE streaming proxy
+- [x] Rate limiting
 - [ ] Token 计数（可选）
-- [ ] Flutter 端 AiService 对接
+- [x] Flutter 端 AiService 对接
 
-### Phase 4 — 数据 CRUD (2-3 天)
+### Phase 4 — 数据 CRUD ✅ 已完成
 
-- [ ] DrinkLog CRUD + 聚合查询 (today / history / streak)
-- [ ] UserProfile CRUD
-- [ ] MemoryFact CRUD
-- [ ] TodayPlan CRUD
+- [x] DrinkLog CRUD + 批量同步 (bulk-sync)
+- [x] UserProfile CRUD
+- [x] MemoryFact CRUD
+- [x] TodayPlan CRUD
+- [x] SessionSummary CRUD
+- [x] CareContact CRUD
 - [ ] 测试
 
 ### Phase 5 — 同步 (2-3 天)

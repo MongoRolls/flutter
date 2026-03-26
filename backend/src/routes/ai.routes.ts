@@ -9,14 +9,16 @@ import { logger } from '../config/logger.js';
 
 const router = Router();
 
+const messageSchema = z.object({
+  role: z.enum(['system', 'user', 'assistant', 'tool']),
+  content: z.string().nullable().optional(),
+  tool_calls: z.array(z.unknown()).optional(),
+  tool_call_id: z.string().optional(),
+});
+
 const chatSchema = z.object({
   body: z.object({
-    messages: z.array(z.object({
-      role: z.enum(['system', 'user', 'assistant', 'tool']),
-      content: z.string().nullable().optional(),
-      tool_calls: z.array(z.unknown()).optional(),
-      tool_call_id: z.string().optional(),
-    })),
+    messages: z.array(messageSchema),
     tools: z.array(z.unknown()).optional(),
     temperature: z.number().min(0).max(2).default(0.7),
     max_tokens: z.number().int().min(1).max(8192).default(2048),
@@ -24,14 +26,41 @@ const chatSchema = z.object({
   }),
 });
 
+// 清洗 messages，仅保留合法字段，剥离客户端可能注入的敏感键
+function sanitizeMessages(
+  messages: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  return messages.map((msg) => {
+    const clean: Record<string, unknown> = {
+      role: msg.role,
+      content: msg.content ?? null,
+    };
+    if (msg.tool_calls) clean.tool_calls = msg.tool_calls;
+    if (msg.tool_call_id) clean.tool_call_id = msg.tool_call_id;
+    return clean;
+  });
+}
+
 // POST /api/ai/chat — SSE proxy to DeepSeek
 router.post('/chat', auth, aiRateLimit, validate(chatSchema), async (req, res, next) => {
+  const controller = new AbortController();
+
+  // 客户端断开时中止上游请求，避免浪费 token
+  req.on('close', () => {
+    if (!res.writableEnded) {
+      controller.abort();
+      logger.info('客户端断开，已中止上游 DeepSeek 请求');
+    }
+  });
+
   try {
     const { messages, tools, temperature, max_tokens, stream } = req.body;
 
+    const cleanMessages = sanitizeMessages(messages);
+
     const requestBody: Record<string, unknown> = {
       model: 'deepseek-chat',
-      messages,
+      messages: cleanMessages,
       temperature,
       max_tokens,
       stream,
@@ -48,6 +77,7 @@ router.post('/chat', auth, aiRateLimit, validate(chatSchema), async (req, res, n
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
 
     if (!upstream.ok) {
@@ -63,6 +93,7 @@ router.post('/chat', auth, aiRateLimit, validate(chatSchema), async (req, res, n
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
 
       const reader = upstream.body.getReader();
       try {
@@ -72,7 +103,9 @@ router.post('/chat', auth, aiRateLimit, validate(chatSchema), async (req, res, n
           res.write(value);
         }
       } catch (e) {
-        logger.error({ err: e }, 'SSE stream error');
+        if ((e as Error).name !== 'AbortError') {
+          logger.error({ err: e }, 'SSE stream error');
+        }
       } finally {
         res.end();
       }
@@ -81,6 +114,10 @@ router.post('/chat', auth, aiRateLimit, validate(chatSchema), async (req, res, n
       res.json(data);
     }
   } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      if (!res.headersSent) res.end();
+      return;
+    }
     next(err);
   }
 });

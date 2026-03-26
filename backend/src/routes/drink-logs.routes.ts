@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { prisma } from '../config/prisma.js';
+import * as DrinkLogService from '../services/drink-log.service.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -11,8 +11,8 @@ const router = Router();
 const createLogSchema = z.object({
   body: z.object({
     ml: z.number().int().min(1).max(5000),
-    icon: z.string().default('💧'),
-    description: z.string().default('喝水'),
+    icon: z.string().default('\u{1F4A7}'),
+    description: z.string().default('\u559D\u6C34'),
     loggedAt: z.string().datetime().optional(),
   }),
 });
@@ -22,8 +22,8 @@ const bulkSyncSchema = z.object({
     logs: z.array(z.object({
       localId: z.string(),
       ml: z.number().int().min(1).max(5000),
-      icon: z.string().default('💧'),
-      description: z.string().default('喝水'),
+      icon: z.string().default('\u{1F4A7}'),
+      description: z.string().default('\u559D\u6C34'),
       loggedAt: z.string().datetime(),
     })).max(500),
   }),
@@ -37,6 +37,7 @@ const querySchema = z.object({
     startDate: z.string().regex(dateRegex).optional(),
     endDate: z.string().regex(dateRegex).optional(),
     limit: z.coerce.number().int().min(1).max(500).default(100),
+    tzOffset: z.coerce.number().int().min(-720).max(840).default(0),
   }),
 });
 
@@ -44,25 +45,14 @@ const querySchema = z.object({
 router.get('/', auth, validate(querySchema), async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const { date, startDate, endDate, limit } = req.query as unknown as { date?: string; startDate?: string; endDate?: string; limit: number };
+    const { date, startDate, endDate, limit, tzOffset } = req.query as unknown as {
+      date?: string; startDate?: string; endDate?: string; limit: number; tzOffset: number;
+    };
 
-    const loggedAtFilter: { gte?: Date; lt?: Date; lte?: Date } = {};
-    if (date) {
-      loggedAtFilter.gte = new Date(date);
-      loggedAtFilter.lt = new Date(new Date(date).setDate(new Date(date).getDate() + 1));
-    } else if (startDate || endDate) {
-      if (startDate) loggedAtFilter.gte = new Date(startDate);
-      if (endDate) loggedAtFilter.lte = new Date(endDate);
-    }
-
-    const logs = await prisma.drinkLog.findMany({
-      where: { userId, ...(Object.keys(loggedAtFilter).length ? { loggedAt: loggedAtFilter } : {}) },
-      orderBy: { loggedAt: 'desc' },
-      take: limit,
+    const result = await DrinkLogService.queryLogs(userId, {
+      date, startDate, endDate, limit, tzOffsetMin: tzOffset,
     });
-
-    const totalMl = logs.reduce((sum, l) => sum + l.ml, 0);
-    res.json({ logs, totalMl, count: logs.length });
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -72,19 +62,7 @@ router.get('/', auth, validate(querySchema), async (req, res, next) => {
 router.post('/', auth, validate(createLogSchema), async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const { ml, icon, description, loggedAt } = req.body;
-
-    const log = await prisma.drinkLog.create({
-      data: {
-        userId,
-        ml,
-        icon: icon ?? '💧',
-        description: description ?? '喝水',
-        loggedAt: loggedAt ? new Date(loggedAt) : new Date(),
-        syncedAt: new Date(),
-      },
-    });
-
+    const log = await DrinkLogService.createLog(userId, req.body);
     res.status(201).json(log);
   } catch (err) {
     next(err);
@@ -95,26 +73,8 @@ router.post('/', auth, validate(createLogSchema), async (req, res, next) => {
 router.post('/bulk-sync', auth, validate(bulkSyncSchema), async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const { logs } = req.body;
-    const now = new Date();
-
-    const created = await prisma.$transaction(
-      (logs as Array<{ localId: string; ml: number; icon: string; description: string; loggedAt: string }>).map((l) =>
-        prisma.drinkLog.create({
-          data: {
-            userId,
-            ml: l.ml,
-            icon: l.icon ?? '💧',
-            description: l.description ?? '喝水',
-            loggedAt: new Date(l.loggedAt),
-            syncedAt: now,
-          },
-        }),
-      ),
-    );
-
-    const result = created.map((c, i) => ({ localId: (logs as Array<{ localId: string }>)[i].localId, serverId: c.id }));
-    res.status(201).json({ synced: result.length, idMap: result });
+    const result = await DrinkLogService.bulkSync(userId, req.body.logs);
+    res.status(201).json(result);
   } catch (err) {
     next(err);
   }
@@ -124,13 +84,7 @@ router.post('/bulk-sync', auth, validate(bulkSyncSchema), async (req, res, next)
 router.delete('/:id', auth, async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const id = req.params.id as string;
-    const log = await prisma.drinkLog.findUnique({ where: { id } });
-    if (!log || log.userId !== userId) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: '记录不存在' } });
-      return;
-    }
-    await prisma.drinkLog.delete({ where: { id } });
+    await DrinkLogService.deleteLog(userId, req.params.id as string);
     res.status(204).send();
   } catch (err) {
     next(err);

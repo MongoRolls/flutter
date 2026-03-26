@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { prisma } from '../config/prisma.js';
+import * as MemoryService from '../services/memory.service.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -16,15 +16,20 @@ const createFactSchema = z.object({
   }),
 });
 
+const querySchema = z.object({
+  query: z.object({
+    limit: z.coerce.number().int().min(1).max(500).default(100),
+    offset: z.coerce.number().int().min(0).default(0),
+  }),
+});
+
 // GET /api/memory
-router.get('/', auth, async (req, res, next) => {
+router.get('/', auth, validate(querySchema), async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const facts = await prisma.memoryFact.findMany({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-    });
-    res.json(facts);
+    const { limit, offset } = req.query as unknown as { limit: number; offset: number };
+    const result = await MemoryService.listFacts(userId, { limit, offset });
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -34,12 +39,7 @@ router.get('/', auth, async (req, res, next) => {
 router.post('/', auth, validate(createFactSchema), async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const { category, content, source } = req.body;
-
-    const fact = await prisma.memoryFact.create({
-      data: { userId, category, content, source: source ?? 'chat' },
-    });
-
+    const fact = await MemoryService.createFact(userId, req.body);
     res.status(201).json(fact);
   } catch (err) {
     next(err);
@@ -50,13 +50,7 @@ router.post('/', auth, validate(createFactSchema), async (req, res, next) => {
 router.delete('/:id', auth, async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const id = req.params.id as string;
-    const fact = await prisma.memoryFact.findUnique({ where: { id } });
-    if (!fact || fact.userId !== userId) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: '记忆不存在' } });
-      return;
-    }
-    await prisma.memoryFact.delete({ where: { id } });
+    await MemoryService.deleteFact(userId, req.params.id as string);
     res.status(204).send();
   } catch (err) {
     next(err);

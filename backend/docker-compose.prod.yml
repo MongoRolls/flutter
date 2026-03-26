@@ -1,0 +1,87 @@
+# KeLeME 生产环境全栈部署
+# 使用: docker-compose -f docker-compose.prod.yml up -d
+#
+# 首次部署后执行数据库迁移:
+#   docker-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
+
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: keleme_api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://keleme:${POSTGRES_PASSWORD:-keleme_prod_password}@postgres:5432/keleme_db
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: keleme_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keleme
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-keleme_prod_password}
+      POSTGRES_DB: keleme_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keleme -d keleme_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+  redis:
+    image: redis:7-alpine
+    container_name: keleme_redis_prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

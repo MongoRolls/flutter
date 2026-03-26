@@ -6,6 +6,7 @@ import pinoHttp from 'pino-http';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { generalRateLimit } from './middleware/rate-limit.js';
 import healthRouter from './routes/health.routes.js';
 import authRouter from './routes/auth.routes.js';
 import profileRouter from './routes/profile.routes.js';
@@ -33,6 +34,9 @@ app.use(express.urlencoded({ extended: true }));
 // ── 路由 ──────────────────────────────────────────────────────────────────────
 app.use('/health', healthRouter);
 app.use('/auth', authRouter);
+
+// /api/* 路由统一应用通用限流（100 次/分/用户）
+app.use('/api', generalRateLimit);
 app.use('/api/profile', profileRouter);
 app.use('/api/drink-logs', drinkLogsRouter);
 app.use('/api/plans', plansRouter);

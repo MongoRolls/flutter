@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { prisma } from '../config/prisma.js';
+import * as SessionService from '../services/session.service.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -18,11 +18,7 @@ const createSummarySchema = z.object({
 router.get('/', auth, async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const summaries = await prisma.sessionSummary.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const summaries = await SessionService.listSummaries(userId);
     res.json(summaries);
   } catch (err) {
     next(err);
@@ -33,12 +29,7 @@ router.get('/', auth, async (req, res, next) => {
 router.post('/', auth, validate(createSummarySchema), async (req, res, next) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id;
-    const { summary } = req.body;
-
-    const record = await prisma.sessionSummary.create({
-      data: { userId, summary },
-    });
-
+    const record = await SessionService.createSummary(userId, req.body.summary);
     res.status(201).json(record);
   } catch (err) {
     next(err);
