@@ -9,6 +9,7 @@ import '../models/drink_preset.dart';
 import '../models/user_profile.dart';
 import '../models/weather_data.dart';
 import '../services/backend_api_service.dart';
+import '../services/drink_sync_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../utils/goal_predictor.dart';
@@ -89,6 +90,32 @@ class UserProvider extends ChangeNotifier {
     _loadWeatherAndGoal();
 
     notifyListeners();
+
+    // 异步同步饮水数据（拉取后端数据合并到本地）
+    _syncDrinkLogs();
+  }
+
+  /// 同步饮水数据（拉取后端数据并合并到本地）
+  Future<void> _syncDrinkLogs() async {
+    try {
+      final syncService = DrinkSyncService.instance;
+
+      // 1. 先同步待同步队列（离线时未上传的记录）
+      await syncService.syncPendingQueue();
+
+      // 2. 拉取当月数据并合并到本地
+      await syncService.syncMonthlyLogs();
+
+      // 3. 重新加载月度数据（可能已更新）
+      final prefs = await SharedPreferences.getInstance();
+      _loadMonthlyHits(prefs);
+      _computeStreak(prefs);
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Drink logs sync failed: $e');
+      // 同步失败不影响本地使用
+    }
   }
 
   Future<void> saveProfile() async {
@@ -98,13 +125,9 @@ class UserProvider extends ChangeNotifier {
     // 异步同步到后端（不阻塞 UI）
     final backend = BackendApiService.instance;
     if (backend.isAuthenticated) {
-      () async {
-        try {
-          await backend.updateProfile(_profile.toMap());
-        } catch (e) {
-          debugPrint('Profile sync failed: $e');
-        }
-      }();
+      backend.updateProfile(_profile.toMap()).catchError(
+        (e) { debugPrint('Profile sync failed: $e'); return <String, dynamic>{}; },
+      );
     }
   }
 
@@ -206,18 +229,23 @@ class UserProvider extends ChangeNotifier {
     // 异步同步到后端（不阻塞 UI）
     final backend = BackendApiService.instance;
     if (backend.isAuthenticated) {
-      () async {
-        try {
-          await backend.createDrinkLog(
-            ml: ml,
-            icon: type,
-            description: desc,
-            loggedAt: now,
-          );
-        } catch (e) {
-          debugPrint('DrinkLog sync failed: $e');
-        }
-      }();
+      backend.createDrinkLog(
+        ml: ml,
+        icon: type,
+        description: desc,
+        loggedAt: now,
+      ).catchError((e) {
+        debugPrint('DrinkLog sync failed: $e');
+        DrinkSyncService.instance.enqueuePendingLog(
+          ml: ml,
+          icon: type,
+          description: desc,
+          loggedAt: now,
+        ).catchError((eq) {
+          debugPrint('Enqueue also failed: $eq');
+        });
+        return <String, dynamic>{};
+      });
     }
 
     notifyListeners();
@@ -231,11 +259,22 @@ class UserProvider extends ChangeNotifier {
       final month = int.parse(parts[1]);
       final day = int.parse(parts[2]);
       final now = DateTime.now();
-      // 只保存本月的数据到 monthlyHits
+      final monthlyKey = 'monthly_hits_${year}_$month';
+      final monthlyData = prefs.getString(monthlyKey);
+      final monthlyMap = <String, dynamic>{};
+      if (monthlyData != null) {
+        final decoded = jsonDecode(monthlyData) as Map<String, dynamic>;
+        monthlyMap.addAll(decoded);
+      }
+
+      monthlyMap[day.toString()] = totalMl;
+      await prefs.setString(monthlyKey, jsonEncode(monthlyMap));
+
+      // 当前月额外更新内存态，保证 UI 立即一致
       if (year == now.year && month == now.month) {
         _monthlyHits[day] = totalMl;
-        await _saveMonthlyHits(prefs);
       }
+
       // 保存到历史记录中（用于计算连续天数）
       final historyKey = 'history_$dateStr';
       await prefs.setInt(historyKey, totalMl);

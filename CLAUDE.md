@@ -156,7 +156,7 @@ Use `flutter run -v` for verbose output when debugging build or runtime issues.
 
 ## 工作流
 
-- 遵循 plan.md 或执行多步骤计划时，按顺序进行，除非有错误或歧义，否则不在步骤之间请求确认
+- 遵循 `.cursor/project/README.md` 中的约定或多步骤计划时，按顺序进行，除非有错误或歧义，否则不在步骤之间请求确认
 
 ## 项目结构
 

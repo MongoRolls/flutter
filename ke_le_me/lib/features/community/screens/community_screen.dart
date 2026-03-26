@@ -6,7 +6,6 @@ import '../../../core/theme/app_theme.dart';
 import '../models/care_contact.dart';
 import '../providers/heart_provider.dart';
 import '../providers/plaza_provider.dart';
-import '../widgets/achievement_badge.dart';
 import '../widgets/care_contact_card.dart';
 import '../widgets/challenge_card.dart';
 import '../widgets/streak_display.dart';
@@ -64,26 +63,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     await widget.plazaProvider.load();
     if (mounted) {
       setState(() => _isLoaded = true);
-      _checkNewAchievements();
     }
-  }
-
-  void _checkNewAchievements() {
-    final ids = widget.plazaProvider.consumeNewlyUnlocked();
-    for (final id in ids) {
-      if (!mounted) return;
-      final a = widget.plazaProvider.achievements
-          .where((a) => a.id == id)
-          .firstOrNull;
-      if (a != null) _showUnlockDialog(a.iconEmoji, a.title);
-    }
-  }
-
-  void _showUnlockDialog(String emoji, String title) {
-    showDialog(
-      context: context,
-      builder: (_) => _UnlockDialog(emoji: emoji, title: title),
-    );
   }
 
   Future<void> _addContact() async {
@@ -115,7 +95,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
       _selectedRecipientIds.clear();
       _showSendPanel = false;
     });
-    _checkNewAchievements();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('已发送提醒 ✓'),
@@ -164,7 +143,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 标题 + 群发按钮
             Row(
               children: [
                 const Icon(
@@ -211,20 +189,34 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ],
             ),
             const SizedBox(height: 14),
-            // 联系人列表
-            ...contacts.map(
-              (c) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: CareContactCard(
-                  contact: c,
-                  onRemind: () => widget.heartProvider.sendCare(
-                    message: '提醒你喝水 💧',
-                    recipients: [c],
+            if (contacts.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: Text(
+                    '暂无联系人，点击下方按钮，可通过好友短码添加',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textHint,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...contacts.map(
+                (c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: CareContactCard(
+                    contact: c,
+                    onRemind: () => widget.heartProvider.sendCare(
+                      message: '提醒你喝水 💧',
+                      recipients: [c],
+                    ),
                   ),
                 ),
               ),
-            ),
-            // 添加联系人
             GestureDetector(
               onTap: _addContact,
               child: Container(
@@ -450,134 +442,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ),
             ),
           ],
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8, top: 4),
-            child: Text(
-              '成就墙',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-          GlassCard(
-            child: GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 0.8,
-              children: widget.plazaProvider.achievements
-                  .map(
-                    (a) => AchievementBadge(
-                      achievement: a,
-                      onTap: a.isUnlocked
-                          ? () => _showUnlockDialog(a.iconEmoji, a.title)
-                          : null,
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-}
-
-/// 成就解锁弹窗
-class _UnlockDialog extends StatefulWidget {
-  final String emoji;
-  final String title;
-  const _UnlockDialog({required this.emoji, required this.title});
-
-  @override
-  State<_UnlockDialog> createState() => _UnlockDialogState();
-}
-
-class _UnlockDialogState extends State<_UnlockDialog>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scale;
-  late Animation<double> _fade;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
-    _ctrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: FadeTransition(
-        opacity: _fade,
-        child: ScaleTransition(
-          scale: _scale,
-          child: Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.blue.withValues(alpha: 0.2),
-                  blurRadius: 32,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🎉', style: TextStyle(fontSize: 48)),
-                const SizedBox(height: 12),
-                const Text(
-                  '成就解锁！',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(widget.emoji, style: const TextStyle(fontSize: 56)),
-                const SizedBox(height: 8),
-                Text(
-                  widget.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('太棒了！'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

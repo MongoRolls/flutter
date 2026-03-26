@@ -38,6 +38,7 @@ class _DebugScreenState extends State<DebugScreen> {
                   _buildDeviceInfoSection(),
                   _buildNotificationsSection(),
                   _buildProviderSection(),
+                  _buildSyncSection(),
                   _buildPersistenceSection(),
                   const SizedBox(height: 20),
                 ],
@@ -429,6 +430,58 @@ class _DebugScreenState extends State<DebugScreen> {
               '清空今日饮水',
               '确认清空今日所有饮水记录？',
               () => DebugService.instance.resetTodayIntake(_p),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSyncSection() {
+    final syncInfo = DebugService.instance.getSyncStatus();
+    final lastSync = syncInfo['lastSyncAt'] as String? ?? '从未';
+    final pendingCount = syncInfo['pendingCount'] as int? ?? 0;
+    final failedCount = syncInfo['failedCount'] as int? ?? 0;
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('🔄', '数据同步'),
+          const SizedBox(height: 12),
+          _infoRow('最后同步', lastSync),
+          _infoRow('待同步', '$pendingCount 条'),
+          _infoRow('失败', '$failedCount 条'),
+          const SizedBox(height: 12),
+          _actionRow(
+            label: '立即同步',
+            icon: Icons.sync,
+            color: AppColors.blue,
+            onTap: () => _runTest(
+              '立即同步',
+              () => DebugService.instance.triggerManualSync(_p),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _actionRow(
+            label: '查看待同步队列',
+            icon: Icons.queue,
+            color: AppColors.orange,
+            onTap: () => _runTest(
+              '查看待同步队列',
+              () => DebugService.instance.inspectPendingQueue(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _actionRow(
+            label: '清空失败队列',
+            icon: Icons.cleaning_services,
+            color: AppColors.textPrimary,
+            isDestructive: true,
+            onTap: () => _runTestWithConfirm(
+              '清空失败队列',
+              '确认清空所有失败的同步记录？',
+              () => DebugService.instance.clearFailedQueue(),
             ),
           ),
         ],

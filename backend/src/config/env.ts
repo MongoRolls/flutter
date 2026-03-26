@@ -9,6 +9,9 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   DEEPSEEK_API_KEY: z.string().startsWith('sk-'),
   CORS_ORIGIN: z.string().default('*'),
+  // 限流配置（好友短码查询）
+  RATE_LIMIT_FRIEND_LOOKUP_USER_PER_MIN: z.coerce.number().default(12),
+  RATE_LIMIT_FRIEND_LOOKUP_IP_PER_MIN: z.coerce.number().default(40),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -23,10 +23,15 @@ class CareRecord {
   /// 格式化时间
   String get formattedTime {
     final now = DateTime.now();
-    final diff = now.difference(sentAt);
-    if (diff.inDays == 0) {
+    final isToday = sentAt.year == now.year &&
+        sentAt.month == now.month &&
+        sentAt.day == now.day;
+    final isYesterday =
+        now.difference(DateTime(sentAt.year, sentAt.month, sentAt.day)).inDays ==
+            1;
+    if (isToday) {
       return '今天 ${sentAt.hour.toString().padLeft(2, '0')}:${sentAt.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays == 1) {
+    } else if (isYesterday) {
       return '昨天 ${sentAt.hour.toString().padLeft(2, '0')}:${sentAt.minute.toString().padLeft(2, '0')}';
     } else {
       return '${sentAt.month}/${sentAt.day} ${sentAt.hour.toString().padLeft(2, '0')}:${sentAt.minute.toString().padLeft(2, '0')}';
@@ -59,36 +64,4 @@ class CareRecord {
     isReplied: map['isReplied'] as bool? ?? false,
     replyText: map['replyText'] as String?,
   );
-
-  /// 预置 mock 数据
-  static List<CareRecord> get mockRecords {
-    final now = DateTime.now();
-    return [
-      CareRecord(
-        id: 'mock_1',
-        fromLabel: '你',
-        toLabel: '妈妈',
-        message: '下午了，妈妈多喝点水，宝贝在想你 💕',
-        sentAt: now.subtract(const Duration(hours: 2)),
-        isReplied: true,
-        replyText: '喝啦喝啦，乖～',
-      ),
-      CareRecord(
-        id: 'mock_2',
-        fromLabel: '小明',
-        toLabel: '你',
-        message: '上午了，别忘了喝水哦，我爱你 ❤️',
-        sentAt: now.subtract(const Duration(hours: 4)),
-        isReplied: true,
-        replyText: '已喝！',
-      ),
-      CareRecord(
-        id: 'mock_3',
-        fromLabel: 'AI 助手',
-        toLabel: '爸爸',
-        message: '根据昨日数据，已自动提醒爸爸早起补水 💧',
-        sentAt: now.subtract(const Duration(hours: 7)),
-      ),
-    ];
-  }
 }

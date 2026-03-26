@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
@@ -7,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/models/user_profile.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../../core/services/backend_api_service.dart';
+import '../../../core/services/drink_sync_service.dart';
 import '../../../core/services/notification_service.dart';
 
 enum TestStatus { success, failure, info }
@@ -334,6 +335,95 @@ class DebugService {
     }
   }
 
+  // ============ Sync Debug ============
+
+  Map<String, dynamic> getSyncStatus() {
+    final syncService = DrinkSyncService.instance;
+    return {
+      'lastSyncAt': syncService.lastSyncAt?.toIso8601String(),
+      'pendingCount': syncService.pendingSyncCount,
+      'failedCount': syncService.failedCount,
+      'isAuthenticated': BackendApiService.instance.isAuthenticated,
+      'deviceId': BackendApiService.instance.deviceId,
+    };
+  }
+
+  Future<TestResult> triggerManualSync(UserProvider provider) async {
+    try {
+      final syncService = DrinkSyncService.instance;
+
+      // 1. 同步待同步队列
+      final queueResult = await syncService.syncPendingQueue();
+
+      // 2. 拉取当月数据
+      await syncService.syncMonthlyLogs();
+
+      // 3. 刷新本地状态
+      await provider.loadProfile();
+
+      return TestResult(
+        status: queueResult == SyncResult.success
+            ? TestStatus.success
+            : TestStatus.info,
+        label: '手动同步',
+        message: '同步完成: ${queueResult.name}',
+        detail: '待同步: ${syncService.pendingSyncCount}, 失败: ${syncService.failedCount}',
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: '手动同步',
+        message: '同步失败',
+        detail: '$e\n$st',
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  Future<TestResult> inspectPendingQueue() async {
+    try {
+      final status = getSyncStatus();
+
+      return TestResult(
+        status: TestStatus.info,
+        label: '查看同步队列',
+        message: '待同步: ${status['pendingCount']}, 失败: ${status['failedCount']}',
+        detail: const JsonEncoder.withIndent('  ').convert(status),
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: '查看同步队列',
+        message: '获取失败',
+        detail: '$e\n$st',
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  Future<TestResult> clearFailedQueue() async {
+    try {
+      await DrinkSyncService.instance.clearFailedQueue();
+
+      return TestResult(
+        status: TestStatus.success,
+        label: '清空失败队列',
+        message: '失败队列已清空',
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: '清空失败队列',
+        message: '清空失败',
+        detail: '$e\n$st',
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
   // ============ Platform Info ============
 
   Map<String, String> get platformInfo => {
@@ -344,6 +434,6 @@ class DebugService {
     'isMacOS': (defaultTargetPlatform == TargetPlatform.macOS).toString(),
     'isWindows': (defaultTargetPlatform == TargetPlatform.windows).toString(),
     'isLinux': (defaultTargetPlatform == TargetPlatform.linux).toString(),
-    'dartVersion': Platform.version,
+    'dartVersion': defaultTargetPlatform.name,
   };
 }

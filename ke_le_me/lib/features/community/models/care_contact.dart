@@ -1,11 +1,11 @@
-import 'dart:math';
-
 class CareContact {
   final String id;
   final String name;
   final String relationship; // 'mom' | 'dad' | 'partner' | 'friend'
   final String avatarEmoji;
+  /// 对方目标饮水量（占位；后续可由服务端同步对方 UserProfile.dailyGoalMl）
   final int mockDailyGoalMl;
+  /// 对方今日已喝（占位；后续可由服务端同步或留空）
   int mockTodayMl;
 
   CareContact({
@@ -26,17 +26,6 @@ class CareContact {
     if (progress >= 1.0) return 'done';
     if (mockTodayMl > 0) return 'inProgress';
     return 'notStarted';
-  }
-
-  /// 每日刷新 mock 水量（在合理范围内随机）
-  void refreshMockWater() {
-    final rng = Random();
-    // 随机产生 0~120% 的饮水量
-    final ratio = rng.nextDouble() * 1.2;
-    mockTodayMl = (mockDailyGoalMl * ratio).round().clamp(
-      0,
-      mockDailyGoalMl + 500,
-    );
   }
 
   Map<String, dynamic> toMap() => {
@@ -65,29 +54,4 @@ class CareContact {
     'friend' => '朋友',
     _ => relationship,
   };
-
-  /// 预置联系人（用于首次安装时的 mock 数据）
-  static List<CareContact> get defaults => [
-    CareContact(
-      id: 'mock_mom',
-      name: '妈妈',
-      relationship: 'mom',
-      avatarEmoji: '👩',
-      mockDailyGoalMl: 2000,
-    ),
-    CareContact(
-      id: 'mock_partner',
-      name: '小明',
-      relationship: 'partner',
-      avatarEmoji: '🧡',
-      mockDailyGoalMl: 2000,
-    ),
-    CareContact(
-      id: 'mock_dad',
-      name: '爸爸',
-      relationship: 'dad',
-      avatarEmoji: '👨',
-      mockDailyGoalMl: 2000,
-    ),
-  ];
 }

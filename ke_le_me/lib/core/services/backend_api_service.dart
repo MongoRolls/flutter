@@ -26,6 +26,7 @@ class BackendApiService {
   String? _refreshToken;
   String? _deviceId;
   bool _initialized = false;
+  Completer<bool>? _refreshCompleter;
 
   String get baseUrl => _dio.options.baseUrl;
   bool get isAuthenticated => _accessToken != null;
@@ -104,17 +105,38 @@ class BackendApiService {
 
   Future<bool> _refreshAccessToken() async {
     if (_refreshToken == null) return false;
+    // 并发控制：如果已有 refresh 在进行，等待它完成
+    if (_refreshCompleter != null) {
+      return _refreshCompleter!.future;
+    }
+    final completer = Completer<bool>();
+    _refreshCompleter = completer;
     try {
-      final response = await Dio(BaseOptions(baseUrl: _dio.options.baseUrl))
-          .post('/auth/refresh', data: {'refreshToken': _refreshToken});
+      final response = await Dio(BaseOptions(
+        baseUrl: _dio.options.baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+      )).post('/auth/refresh', data: {'refreshToken': _refreshToken});
       _accessToken = (response.data as Map)['accessToken'] as String;
       await _saveTokens();
+      if (!completer.isCompleted) completer.complete(true);
       return true;
     } on DioException {
       _accessToken = null;
       _refreshToken = null;
       await _saveTokens();
+      if (!completer.isCompleted) completer.complete(false);
       return false;
+    } catch (e, st) {
+      debugPrint('Token refresh unexpected error: $e');
+      if (kDebugMode) debugPrint('$st');
+      _accessToken = null;
+      _refreshToken = null;
+      await _saveTokens();
+      if (!completer.isCompleted) completer.complete(false);
+      return false;
+    } finally {
+      _refreshCompleter = null;
     }
   }
 
@@ -139,7 +161,7 @@ class BackendApiService {
   Future<void> ensureAuthenticated() async {
     if (_accessToken != null) {
       try {
-        await _dio.get('/health');
+        await _dio.get('/api/profile');
         return;
       } on DioException catch (e) {
         if (e.response?.statusCode == 401) {
@@ -236,17 +258,62 @@ class BackendApiService {
     return r.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getDrinkLogs({String? date}) async {
-    final r = await get(
-      '/api/drink-logs',
-      queryParameters: {if (date case final d?) 'date': d},
-    );
+  Future<Map<String, dynamic>> getDrinkLogs({
+    String? date,
+    String? startDate,
+    String? endDate,
+    int? tzOffset,
+    int? limit,
+  }) async {
+    final queryParams = <String, dynamic>{
+      if (date != null) 'date': date,
+      if (startDate != null) 'startDate': startDate,
+      if (endDate != null) 'endDate': endDate,
+      if (tzOffset != null) 'tzOffset': tzOffset,
+      if (limit != null) 'limit': limit,
+    };
+    final r = await get('/api/drink-logs', queryParameters: queryParams);
     return r.data as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> bulkSyncDrinkLogs(
       List<Map<String, dynamic>> logs) async {
     final r = await post('/api/drink-logs/bulk-sync', data: {'logs': logs});
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getCareContacts() async {
+    final r = await get('/api/care/contacts');
+    final list = r.data as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createCareContact({
+    required String contactId,
+    required String nickname,
+  }) async {
+    final r = await post('/api/care/contacts', data: {
+      'contactId': contactId,
+      'nickname': nickname,
+    });
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getFriendCode() async {
+    final r = await get('/api/care/friend-code');
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> rotateFriendCode() async {
+    final r = await post('/api/care/friend-code/rotate');
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> lookupFriendCode(String code) async {
+    final r = await get(
+      '/api/care/friend-lookup',
+      queryParameters: {'code': code.trim().toUpperCase()},
+    );
     return r.data as Map<String, dynamic>;
   }
 }

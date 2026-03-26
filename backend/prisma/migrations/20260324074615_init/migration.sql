@@ -1,10 +1,12 @@
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
+    "deviceId" TEXT,
     "phone" TEXT,
     "email" TEXT,
-    "passwordHash" TEXT NOT NULL,
+    "passwordHash" TEXT,
     "nickname" TEXT NOT NULL DEFAULT '水友',
+    "friendCode" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -95,6 +97,12 @@ CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "User_deviceId_key" ON "User"("deviceId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_friendCode_key" ON "User"("friendCode");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "UserProfile_userId_key" ON "UserProfile"("userId");
 
 -- CreateIndex
@@ -114,6 +122,9 @@ CREATE UNIQUE INDEX "TodayPlan_userId_date_key" ON "TodayPlan"("userId", "date")
 
 -- CreateIndex
 CREATE INDEX "CareContact_ownerId_idx" ON "CareContact"("ownerId");
+
+-- CreateIndex
+CREATE INDEX "CareContact_contactId_idx" ON "CareContact"("contactId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CareContact_ownerId_contactId_key" ON "CareContact"("ownerId", "contactId");

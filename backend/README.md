@@ -2,6 +2,8 @@
 
 KeLeME (渴了么) AI 饮水提醒 App 后端服务。基于 **Node.js 20 + Express 4 + TypeScript + Prisma + PostgreSQL + Redis** 构建。
 
+> **容器运行时**：本项目统一使用 **Podman**（而非 Docker）管理容器和镜像。以下所有命令均基于 `podman` / `podman-compose`。
+
 ---
 
 ## 目录
@@ -15,7 +17,7 @@ KeLeME (渴了么) AI 饮水提醒 App 后端服务。基于 **Node.js 20 + Expr
 - [API 概览](#api-概览)
 - [部署](#部署)
   - [PM2 部署（推荐）](#pm2-部署推荐)
-  - [Docker 部署](#docker-部署)
+  - [容器部署](#容器部署)
   - [生产环境完整流程](#生产环境完整流程)
 - [监控与运维](#监控与运维)
 - [常见问题](#常见问题)
@@ -29,9 +31,10 @@ KeLeME (渴了么) AI 饮水提醒 App 后端服务。基于 **Node.js 20 + Expr
 | ---------- | -------- | ---------------------------- |
 | Node.js    | 20 LTS   | 推荐使用 `nvm` 管理版本     |
 | npm        | 9+       | 随 Node.js 附带             |
-| Docker/Podman | 20+   | 用于运行 PostgreSQL 和 Redis |
-| PostgreSQL | 16       | 通过 Docker 或系统安装       |
-| Redis      | 7        | 通过 Docker 或系统安装       |
+| Podman     | 4+       | 用于运行 PostgreSQL 和 Redis |
+| podman-compose | 1.0+ | Compose 文件编排             |
+| PostgreSQL | 16       | 通过 Podman 容器运行         |
+| Redis      | 7        | 通过 Podman 容器运行         |
 | PM2        | 5+       | 生产部署进程管理（可选）     |
 
 ---
@@ -42,7 +45,7 @@ KeLeME (渴了么) AI 饮水提醒 App 后端服务。基于 **Node.js 20 + Expr
 
 ```bash
 cd backend
-docker-compose up -d
+podman-compose up -d
 ```
 
 这会启动：
@@ -53,7 +56,7 @@ docker-compose up -d
 验证服务是否就绪：
 
 ```bash
-docker-compose ps
+podman-compose ps
 # 确认两个容器状态为 running (healthy)
 ```
 
@@ -95,14 +98,14 @@ npm run dev
 服务启动后输出：
 
 ```
-🚀 KeLeME 后端服务已启动，端口 3000，环境 development
+KeLeME 后端服务已启动，端口 3000，环境 development
 ```
 
 ### 6. 验证服务
 
 ```bash
 curl http://localhost:3000/health
-# {"status":"ok","timestamp":"...","service":"keleme-backend"}
+# {"status":"ok","timestamp":"...","service":"keleme-backend","checks":{"postgres":"ok","redis":"ok"}}
 ```
 
 ---
@@ -216,7 +219,7 @@ backend/
 │   ├── config/
 │   │   ├── env.ts                 # Zod 环境变量校验
 │   │   ├── prisma.ts              # PrismaClient 单例
-│   │   ├── redis.ts               # ioredis 实例（lazy connect）
+│   │   ├── redis.ts               # ioredis 实例（启动时验证连接）
 │   │   └── logger.ts              # Pino 日志（开发环境 pino-pretty）
 │   ├── middleware/
 │   │   ├── auth.ts                # JWT Bearer Token 验证
@@ -224,7 +227,7 @@ backend/
 │   │   ├── validate.ts            # Zod Schema 请求校验
 │   │   └── error-handler.ts       # 全局错误处理 -> JSON 响应
 │   ├── routes/
-│   │   ├── health.routes.ts       # GET /health
+│   │   ├── health.routes.ts       # GET /health（深度检查 PG + Redis）
 │   │   ├── auth.routes.ts         # /auth/* (5 个端点)
 │   │   ├── profile.routes.ts      # /api/profile
 │   │   ├── drink-logs.routes.ts   # /api/drink-logs (含批量同步)
@@ -234,7 +237,13 @@ backend/
 │   │   ├── ai.routes.ts           # /api/ai/chat (SSE 流式代理)
 │   │   └── care.routes.ts         # /api/care/contacts
 │   ├── services/
-│   │   └── auth.service.ts        # 认证业务逻辑（设备登录/邮箱绑定/JWT 刷新/登出）
+│   │   ├── auth.service.ts        # 认证业务逻辑
+│   │   ├── profile.service.ts     # 用户配置
+│   │   ├── drink-log.service.ts   # 饮水记录（含聚合、去重）
+│   │   ├── plan.service.ts        # 每日计划
+│   │   ├── memory.service.ts      # AI 记忆（含分页）
+│   │   ├── session.service.ts     # 会话摘要
+│   │   └── care.service.ts        # 社交关怀联系人
 │   ├── utils/
 │   │   ├── jwt.ts                 # JWT 签发 / 验证（access 15min, refresh 7d）
 │   │   ├── password.ts            # bcrypt 哈希 / 校验（cost 12）
@@ -242,14 +251,17 @@ backend/
 │   └── types/
 │       └── index.ts               # AuthenticatedRequest 类型定义
 ├── ecosystem.config.cjs           # PM2 进程管理配置
-├── docker-compose.yml             # 开发环境 PostgreSQL + Redis
-├── docker-compose.prod.yml        # 生产环境全栈部署（App + DB + Redis）
-├── Dockerfile                     # 生产多阶段构建
+├── docker-compose.yml             # 开发环境 PostgreSQL + Redis（podman-compose 兼容）
+├── docker-compose.prod.yml        # 生产环境全栈部署（podman-compose 兼容）
+├── Dockerfile                     # 生产多阶段构建（podman build 兼容）
 ├── .env.example                   # 环境变量模板
 ├── package.json
-├── tsconfig.json
-└── plan.md                        # 架构设计文档
+└── tsconfig.json
 ```
+
+> **仓库级文档**（前后端协作、饮水同步与 Prisma 运维摘要）：仓库根目录 `.cursor/project/README.md`（自 `backend/` 为 `../.cursor/project/README.md`）。
+
+> **文件命名说明**：`docker-compose.yml` 和 `Dockerfile` 保留原名以兼容 OCI 标准工具链。实际运行时使用 `podman-compose` 和 `podman build`。
 
 ---
 
@@ -321,9 +333,9 @@ backend/
 
 ### 健康检查
 
-| 方法 | 路径      | 说明         | 认证 |
-| ---- | --------- | ------------ | ---- |
-| GET  | `/health` | 服务状态检查 | 无   |
+| 方法 | 路径      | 说明                             | 认证 |
+| ---- | --------- | -------------------------------- | ---- |
+| GET  | `/health` | 深度检查（PostgreSQL + Redis）   | 无   |
 
 ---
 
@@ -332,8 +344,8 @@ backend/
 支持三种部署方式，按推荐程度排列：
 
 1. **PM2 部署** — 适合 VPS / 云主机，简单高效，推荐首选
-2. **Docker 部署** — 适合容器化环境
-3. **Docker Compose 全栈部署** — 一键拉起所有服务
+2. **容器部署** — 适合容器化环境（使用 Podman）
+3. **Podman Compose 全栈部署** — 一键拉起所有服务
 
 ### PM2 部署（推荐）
 
@@ -345,8 +357,8 @@ PM2 是 Node.js 生产环境进程管理器，提供自动重启、负载均衡�
 # 全局安装 PM2
 npm install -g pm2
 
-# 服务器上安装 PostgreSQL 16 和 Redis 7（或用 Docker）
-docker-compose up -d   # 启动 DB + Redis
+# 服务器上启动 PostgreSQL 16 和 Redis 7
+podman-compose up -d
 ```
 
 #### 首次部署
@@ -506,7 +518,7 @@ server {
 }
 ```
 
-### Docker 部署
+### 容器部署
 
 #### 构建镜像
 
@@ -514,10 +526,10 @@ server {
 cd backend
 
 # 构建镜像
-docker build -t keleme-backend .
+podman build -t keleme-backend .
 
 # 运行容器
-docker run -d \
+podman run -d \
   --name keleme-api \
   -p 3000:3000 \
   --env-file .env \
@@ -525,30 +537,30 @@ docker run -d \
   keleme-backend
 ```
 
-Dockerfile 采用多阶段构建：
+Dockerfile 采用多阶段构建（与 Podman 完全兼容）：
 
 1. **builder 阶段** - 安装所有依赖，生成 Prisma Client，编译 TypeScript
 2. **runner 阶段** - 仅安装生产依赖，复制编译产物，暴露端口 3000
 
 内置健康检查：每 30 秒请求 `GET /health`。
 
-#### Docker Compose 开发环境
+#### Podman Compose 开发环境
 
 ```bash
 # 启动 PostgreSQL + Redis
-docker-compose up -d
+podman-compose up -d
 
 # 查看日志
-docker-compose logs -f
+podman-compose logs -f
 
 # 停止服务
-docker-compose down
+podman-compose down
 
 # 停止并清除数据卷
-docker-compose down -v
+podman-compose down -v
 ```
 
-#### Docker Compose 生产全栈部署
+#### Podman Compose 生产全栈部署
 
 使用 `docker-compose.prod.yml` 一键部署完整服务栈：
 
@@ -558,16 +570,16 @@ cp .env.example .env
 # 编辑 .env 设置生产配置
 
 # 启动全部服务（API + PostgreSQL + Redis）
-docker-compose -f docker-compose.prod.yml up -d
+podman-compose -f docker-compose.prod.yml up -d
 
 # 执行数据库迁移
-docker-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
+podman-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
 
 # 查看日志
-docker-compose -f docker-compose.prod.yml logs -f api
+podman-compose -f docker-compose.prod.yml logs -f api
 
 # 查看状态
-docker-compose -f docker-compose.prod.yml ps
+podman-compose -f docker-compose.prod.yml ps
 ```
 
 ### 生产环境完整流程
@@ -590,24 +602,25 @@ cp .env.example .env
 npx prisma migrate deploy
 
 # 3. 启动服务（选其一）
-pm2 start ecosystem.config.cjs --env production    # PM2
+pm2 start ecosystem.config.cjs --env production              # PM2
 # 或
-docker-compose -f docker-compose.prod.yml up -d     # Docker
+podman-compose -f docker-compose.prod.yml up -d              # Podman Compose
 ```
 
 > **注意**：生产环境使用 `prisma migrate deploy` 而非 `prisma migrate dev`，前者只执行已有迁移，不会创建新迁移。
 
 ### 部署方式对比
 
-| 特性             | PM2              | Docker           | Docker Compose 全栈 |
+| 特性             | PM2              | Podman           | Podman Compose 全栈 |
 | ---------------- | ---------------- | ---------------- | -------------------- |
 | 适用场景         | VPS / 云主机     | 容器化平台       | 快速搭建完整环境     |
-| 零停机更新       | `pm2 reload`     | 需配合编排工具   | `docker-compose up -d` |
+| 零停机更新       | `pm2 reload`     | 需配合编排工具   | `podman-compose up -d` |
 | 多实例负载均衡   | cluster 模式     | 需外部 LB        | 需外部 LB            |
-| 日志管理         | 内置             | Docker logs      | Docker logs          |
+| 日志管理         | 内置             | `podman logs`    | `podman-compose logs` |
 | 监控             | `pm2 monit` / Plus | 需额外工具      | 需额外工具           |
 | 开机自启         | `pm2 startup`    | `--restart`      | `restart: unless-stopped` |
 | 学习成本         | 低               | 中               | 中                   |
+| 无守护进程       | 否               | 是（rootless）   | 是（rootless）       |
 
 ---
 
@@ -616,11 +629,11 @@ docker-compose -f docker-compose.prod.yml up -d     # Docker
 ### 健康检查
 
 ```bash
-# HTTP 健康检查
+# HTTP 健康检查（深度检查 PostgreSQL + Redis）
 curl http://localhost:3000/health
 
-# Docker 内置健康检查（Dockerfile 已配置）
-docker inspect --format='{{.State.Health.Status}}' keleme-api
+# Podman 容器健康检查（Dockerfile 已配置）
+podman inspect --format='{{.State.Health.Status}}' keleme-api
 
 # PM2 进程状态
 pm2 show keleme-api
@@ -633,9 +646,9 @@ pm2 show keleme-api
 pm2 logs keleme-api               # 实时
 pm2 logs keleme-api --lines 200   # 最近 200 行
 
-# Docker 日志
-docker logs -f keleme-api         # 实时
-docker logs --tail 200 keleme-api # 最近 200 行
+# Podman 日志
+podman logs -f keleme-api         # 实时
+podman logs --tail 200 keleme-api # 最近 200 行
 
 # 日志文件位置（PM2）
 # logs/out.log    — 标准输出
@@ -648,8 +661,8 @@ docker logs --tail 200 keleme-api # 最近 200 行
 # 导出数据库
 pg_dump -U keleme -d keleme_db > backup_$(date +%Y%m%d).sql
 
-# Docker 环境导出
-docker exec keleme_postgres pg_dump -U keleme -d keleme_db > backup_$(date +%Y%m%d).sql
+# Podman 环境导出
+podman exec keleme_postgres pg_dump -U keleme -d keleme_db > backup_$(date +%Y%m%d).sql
 
 # 恢复数据库
 psql -U keleme -d keleme_db < backup_20260326.sql
@@ -670,14 +683,14 @@ psql -U keleme -d keleme_db < backup_20260326.sql
 ### 连不上数据库
 
 ```bash
-# 检查 Docker 容器状态
-docker-compose ps
+# 检查 Podman 容器状态
+podman-compose ps
 
 # 如果容器未启动
-docker-compose up -d
+podman-compose up -d
 
 # 检查 PostgreSQL 是否就绪
-docker exec keleme_postgres pg_isready -U keleme -d keleme_db
+podman exec keleme_postgres pg_isready -U keleme -d keleme_db
 ```
 
 ### 端口被占用
@@ -720,15 +733,28 @@ pm2 start ecosystem.config.cjs --env production
 # 在 upstream 配置中添加 ip_hash
 ```
 
+### Podman Machine 未启动（macOS）
+
+```bash
+# 检查 Podman Machine 状态
+podman machine list
+
+# 如果未运行
+podman machine start
+
+# 验证
+podman info
+```
+
 ### 重置开发环境
 
 ```bash
 # 清除数据库数据并重新迁移
 npm run db:reset
 
-# 彻底重置（包括 Docker 数据卷）
-docker-compose down -v
-docker-compose up -d
+# 彻底重置（包括 Podman 数据卷）
+podman-compose down -v
+podman-compose up -d
 npm run db:migrate
 ```
 
@@ -745,4 +771,4 @@ npm run db:migrate
 | Phase 5 | 同步（Push / Pull + 冲突解决 + Flutter 同步队列） | 🔲 待开发 |
 | Phase 6 | 社区（真实社交关系 + 排行榜 + FCM 推送） | 🔲 待开发 |
 
-详细架构设计见 `plan.md`。
+前后端协作与现状摘要见仓库根目录 `.cursor/project/README.md`。

@@ -1,6 +1,4 @@
--- AlterTable: add deviceId unique column and make passwordHash optional
-ALTER TABLE "User" ADD COLUMN "deviceId" TEXT;
-
-CREATE UNIQUE INDEX "User_deviceId_key" ON "User"("deviceId");
-
-ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL;
+-- This migration is intentionally left as no-op.
+-- Reason: the original timestamp order was earlier than init migration,
+-- which caused shadow database validation failure.
+-- Equivalent schema changes are merged into the init migration.

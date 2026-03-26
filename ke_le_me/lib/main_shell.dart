@@ -33,7 +33,6 @@ class _MainShellState extends State<MainShell> {
     _heartProvider = HeartProvider();
     _plazaProvider = PlazaProvider(
       userProvider: widget.userProvider,
-      heartProvider: _heartProvider,
     );
   }
 

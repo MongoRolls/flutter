@@ -1,7 +1,7 @@
 # KeLeME Backend — Project Rules
 
 > Express.js + TypeScript API backend for the 渴了么 (KeLeME) Flutter app.
-> For the full architecture plan see `plan.md`.
+> 仓库级协作说明见仓库根目录 `.cursor/project/README.md`。
 
 ## Language
 
