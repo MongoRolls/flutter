@@ -9,7 +9,8 @@ class AppDelegate: FlutterAppDelegate, UNUserNotificationCenterDelegate {
   }
 
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
-    return true
+    // 关闭状态恢复，防止 macOS 在启动时用旧 frame 覆盖我们设定的窗口尺寸
+    return false
   }
 
   override func applicationDidFinishLaunching(_ notification: Notification) {
