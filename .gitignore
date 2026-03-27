@@ -68,9 +68,10 @@ GoogleService-Info.plist
 # Coverage
 coverage/
 
+# --- Node / Next (monorepo: web/, backend/ 等) ---
 node_modules/
-
-
 .next/
+out/
+dist/
+*.tsbuildinfo
 next-env.d.ts
-

@@ -41,20 +41,6 @@ export function SiteHeader({ className }: { className?: string }) {
             KeLeME
           </span>
         </Link>
-        <nav className="hidden items-center gap-1 md:flex" aria-label="页面导航">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-kelem-text-secondary hover:text-foreground"
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
         <div className="relative z-110 flex items-center gap-2">
           <ThemeToggle />
           <Link

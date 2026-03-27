@@ -28,10 +28,6 @@ export function FooterSection() {
             >
               下载
             </Link>
-            {/* TODO: 替换为真实隐私政策 URL */}
-            <span className="text-kelem-text-hint">隐私政策（占位）</span>
-            {/* TODO: 替换为真实用户协议 URL */}
-            <span className="text-kelem-text-hint">用户协议（占位）</span>
           </nav>
           <div className="flex items-center gap-2 sm:justify-end">
             <span className="text-xs text-kelem-text-hint">主题</span>
