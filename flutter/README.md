@@ -6,14 +6,14 @@
 
 **技术栈**: Flutter 3.11+ / Dart / SharedPreferences / Flutter Local Notifications
 
-**项目目录**: Flutter 工程位于 `ke_le_me/` 子目录中。
+**项目目录**: 本仓库根目录下的 `flutter/` 子目录（Dart 包名 `ke_le_me`）。
 
 ---
 
 ## 快速启动
 
 ```bash
-cd /Users/admin/Desktop/code/flutter/ke_le_me
+cd /path/to/keleme/flutter
 flutter pub get
 flutter run -d macos
 ```
@@ -45,7 +45,7 @@ flutter build web        # Web
 ## 项目结构
 
 ```
-ke_le_me/lib/
+flutter/lib/
 ├── main.dart              # 应用入口
 ├── models/                # 数据模型
 ├── providers/             # 状态管理 (ChangeNotifier)

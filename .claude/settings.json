@@ -1,8 +1,9 @@
 {
   "project": {
-    "name": "Flutter AI Toolkit Project",
-    "type": "flutter",
-    "language": "dart"
+    "name": "渴了么 (KeLeME)",
+    "type": "monorepo",
+    "language": "dart",
+    "description": "Hydration reminder app: Flutter client in flutter/, Next.js site in web/, API in backend/. Dart package name remains ke_le_me."
   },
   "ai": {
     "provider": "firebase_ai",

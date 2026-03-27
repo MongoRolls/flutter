@@ -5,12 +5,12 @@ Guidelines for AI coding agents working in this repository.
 ## Project Overview
 
 **KeLeME (渴了么)** — AI-powered hydration reminder app built with Flutter/Dart.
-All app code lives in `ke_le_me/`. Run every command from that directory.
+Flutter app code lives in `flutter/` (Dart package name `ke_le_me`). Run every Flutter command from that directory.
 
 ## Build / Lint / Test Commands
 
 ```bash
-# All commands must be run from ke_le_me/
+# All Flutter commands must be run from flutter/
 
 flutter pub get                          # Install dependencies
 flutter analyze                          # Static analysis — run before committing
@@ -129,7 +129,7 @@ Data flow: Provider -> `notifyListeners()` -> screens call `setState()` -> UI re
 ### Directory Structure
 
 ```
-ke_le_me/lib/
+flutter/lib/
   main.dart / main_shell.dart     # App entry, bottom nav shell
   core/                           # Shared across features
     models/                       # UserProfile, DrinkLog, WeatherData, etc.

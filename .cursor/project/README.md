@@ -8,7 +8,8 @@
 
 | 路径 | 说明 |
 |------|------|
-| `ke_le_me/` | Flutter 客户端（主应用代码） |
+| `flutter/` | Flutter 客户端（主应用代码；Dart 包名 `ke_le_me`） |
+| `web/` | Next.js 站点（官网/落地页等） |
 | `backend/` | Node.js + Express + Prisma + PostgreSQL + Redis |
 
 ---

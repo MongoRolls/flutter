@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**渴了么 (KeLeME)** — an AI-powered hydration reminder app built with Flutter. The Flutter app lives in `ke_le_me/`. All development work happens inside that directory.
+**渴了么 (KeLeME)** — an AI-powered hydration reminder app built with Flutter. This repo is a **monorepo**: Flutter client in `flutter/`, Next.js site in `web/`, API in `backend/`. Flutter commands below are run from `flutter/`.
 
 ## Commands
 
-Run all commands from `ke_le_me/`:
+Run all commands from `flutter/`:
 
 ```bash
 flutter pub get          # Install dependencies

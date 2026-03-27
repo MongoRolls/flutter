@@ -69,3 +69,8 @@ GoogleService-Info.plist
 coverage/
 
 node_modules/
+
+
+.next/
+next-env.d.ts
+

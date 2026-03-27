@@ -239,8 +239,8 @@ flowchart LR
 
 | 页面/模块 | 主要文件 |
 | --- | --- |
-| 应用入口与路由 | `ke_le_me/lib/main.dart` |
-| 主导航 | `ke_le_me/lib/main_shell.dart` |
+| 应用入口与路由 | `flutter/lib/main.dart` |
+| 主导航 | `flutter/lib/main_shell.dart` |
 | 首页 | `features/home/screens/home_screen.dart` |
 | 安排 | `features/plan/screens/plan_screen.dart`，计划逻辑 `features/plan/providers/plan_provider.dart` |
 | AI 助手 | `features/chat/screens/chat_screen.dart` |

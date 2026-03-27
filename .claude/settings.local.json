@@ -1,8 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find /Users/zhichaoxu/code/flutter/.cursor -type f -name \"*.md\" -o -name \"*.json\" -o -name \"*.yml\" -o -name \"*.yaml\" 2>/dev/null | head -20)",
-      "Bash(cd /Users/zhichaoxu/code/flutter/ke_le_me && flutter pub get 2>&1)",
+      "Bash(find /Users/admin/Desktop/code/keleme/.cursor -type f \\( -name \"*.md\" -o -name \"*.json\" -o -name \"*.yml\" -o -name \"*.yaml\" \\) 2>/dev/null | head -20)",
+      "Bash(cd /Users/admin/Desktop/code/keleme/flutter && flutter pub get 2>&1)",
       "Bash(flutter devices:*)",
       "Bash(flutter analyze:*)",
       "Bash(flutter run:*)",

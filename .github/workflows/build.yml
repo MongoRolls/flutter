@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ke_le_me
+        working-directory: flutter
 
     steps:
       - uses: actions/checkout@v4
@@ -35,13 +35,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: apk-release
-          path: ke_le_me/build/app/outputs/flutter-apk/*.apk
+          path: flutter/build/app/outputs/flutter-apk/*.apk
 
   build-web:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ke_le_me
+        working-directory: flutter
 
     steps:
       - uses: actions/checkout@v4
@@ -57,4 +57,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: web-release
-          path: ke_le_me/build/web
+          path: flutter/build/web
