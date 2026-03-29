@@ -1,0 +1,102 @@
+# 后端生产部署规范（KeLeME）
+
+本文档为 **VPS 上部署 `backend/` 的约定性说明**，与实现细节命令清单（`vps_backend_deploy_steps.md`）、分阶段计划（`vps_backend_deployment_plan.md`）及 `backend/README.md` 部署章节配套。
+
+---
+
+## 1. 适用范围
+
+- **目标环境**：单机 VPS（默认 **CentOS Stream 9**、约 **2C2G**），公网提供 HTTPS API。  
+- **不适用**：Kubernetes 多副本、无服务器（Lambda 等）——若未来采用需另立规范。
+
+---
+
+## 2. 规范决策（必须遵循的默认）
+
+| 决策 | 约定 |
+|------|------|
+| **默认架构** | **PM2 在宿主机运行 Node API**；**PostgreSQL + Redis 仅通过容器**（`backend/docker-compose.yml`）运行。 |
+| **代码上机** | 默认：VPS 上 **`git clone` / `git pull`**，在仓库内进入 `backend/` 部署。 **可选**：CI 构建 API 镜像推 **ghcr.io**，VPS `podman pull` + `podman-compose`（见 `backend/README.md`、`scripts/deploy-podman.sh`），**无需整仓 clone**。 |
+| **不推荐作为首选** | **全容器 API**（`docker-compose.prod.yml` 同时起 API+DB）在 **2C2G** 上资源更紧；详见 `backend/README.md` 再选。 |
+| **容器运行时** | 与仓库一致，优先 **Podman**（`docker-compose.yml` 文件名保留以兼容工具链，命令用 `podman-compose` / `podman compose`）。 |
+| **生产迁移** | 仅在服务器执行 **`npx prisma migrate deploy`**，禁止在生产使用 `prisma migrate dev`。 |
+
+### 2.1 为何默认选「PM2 + 仅 DB 容器」
+
+- **内存**：比「API+PG+Redis 全进容器」更省，利于小规格机器。  
+- **运维**：日志、重启、改 `.env` 直观；与 `backend/README.md` 推荐路径一致。  
+- **连接串**：API 在宿主机，`.env` 中 `DATABASE_URL` / `REDIS_URL` 使用 **`127.0.0.1`** 指向映射端口即可。
+
+### 2.2 何时可偏离默认
+
+- **全容器**：团队更熟 Docker、机器规格更大，或坚持「宿主机无 Node」时，使用 `docker-compose.prod.yml`（见 `backend/README.md`）。
+
+---
+
+## 3. 运行时拓扑（默认）
+
+```text
+[ 公网 :443 ] → Nginx → 127.0.0.1:3000 → PM2 → keleme-api (Node)
+                                              ↘
+                                    127.0.0.1:5432 / :6379
+                                              ↓
+                                    Podman: postgres + redis
+```
+
+**勿混用**：同一台机上不要既用 PM2 跑 API，又用 `docker-compose.prod.yml` 再起一个 API 容器（端口与职责重复）。
+
+---
+
+## 4. 首次部署与后续更新
+
+### 4.1 命令顺序（与 `vps_backend_deploy_steps.md` 一致）
+
+1. 起 PG/Redis：`podman-compose up -d`（在 `backend/`）。  
+2. 配置 `.env`（生产密码与 `docker-compose.yml` 中一致）。  
+3. `npm ci --omit=dev` → `npx prisma generate` → `npx prisma migrate deploy` → `npm run build`。  
+4. `pm2 start ecosystem.config.cjs --env production` → `pm2 save` → `pm2 startup`。  
+5. Nginx + HTTPS（见 `backend/README.md`）。
+
+### 4.2 后续更新（规范推荐）
+
+在 `backend/` 目录使用脚本，避免手敲遗漏：
+
+```bash
+./scripts/deploy.sh --with-git-pull   # 先 git pull 再安装依赖、迁移、构建、pm2 reload（常用）
+./scripts/deploy.sh                   # 已手动 git pull 后，仅执行安装依赖～reload
+```
+
+---
+
+## 5. 数据库表结构变更（Prisma）
+
+与默认部署方式无关，一律：
+
+1. **开发机**：修改 `prisma/schema.prisma`，执行 `npx prisma migrate dev --name <说明>`，生成并提交 **`prisma/migrations/`** 新目录。  
+2. **合并到主分支** 后再部署到生产。  
+3. **生产**：部署流程中包含 **`npx prisma migrate deploy`**（已包含在 `deploy.sh`）。  
+
+**禁止**：修改已合并到主分支的历史迁移文件内容；故障处理见 `.cursor/project/README.md` Prisma 小节。
+
+---
+
+## 6. 可选自动化
+
+- **GitHub Actions SSH 部署**：`push` 到默认分支后 SSH 到 VPS 执行 `deploy.sh --with-git-pull`——**不强制**。
+- **镜像发布**：`.github/workflows/backend-docker.yml` 在 `main` 推送且 `backend/**` 变更时构建并推送 **`ghcr.io/<仓库小写>/keleme-backend`**；VPS 配置 `KELEME_BACKEND_IMAGE` 后执行 `./scripts/deploy-podman.sh --pull`（见 `vps_backend_deploy_steps.md` 路线 B）。
+
+---
+
+## 7. 文档索引
+
+| 文档 | 用途 |
+|------|------|
+| **本文** | 规范与默认决策 |
+| `vps_backend_deploy_steps.md` | Step-by-Step 命令清单 |
+| `vps_backend_deployment_plan.md` | Phase 分阶段计划 |
+| `backend/README.md` | 开发、部署细节、Nginx、故障排查 |
+| `.cursor/project/README.md` | 仓库索引与 Prisma 运维约定 |
+
+---
+
+*变更本规范时，请同步检查 §7 所列文档是否仍一致。*

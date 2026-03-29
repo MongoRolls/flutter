@@ -1,0 +1,9 @@
+# 本地全栈：与 docker-compose.prod.yml 合并后从 Dockerfile 构建 API 镜像
+# 用法（在 backend/）：
+#   podman-compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml up -d --build
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile

@@ -1,16 +1,17 @@
-# KeLeME 生产环境全栈部署
-# 使用: docker-compose -f docker-compose.prod.yml up -d
-#
-# 首次部署后执行数据库迁移:
-#   docker-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
+# KeLeME 生产环境全栈部署（API + PostgreSQL + Redis）
+# VPS（镜像来自 ghcr.io）：
+#   在 .env 设置 KELEME_BACKEND_IMAGE=ghcr.io/<owner>/<repo>/keleme-backend:latest
+#   ./scripts/deploy-podman.sh --pull
+# 本地从源码构建 API 镜像：
+#   podman-compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml up -d --build
+# 迁移也可：podman-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
 
 version: '3.9'
 
 services:
+  # 镜像由 CI 推送到 ghcr.io，或本地先 build（见 docker-compose.prod.local.yml）
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${KELEME_BACKEND_IMAGE:-keleme-backend:local}
     container_name: keleme_api
     restart: unless-stopped
     ports:

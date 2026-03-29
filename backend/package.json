@@ -12,7 +12,11 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "deploy:prod": "bash scripts/deploy.sh",
+    "deploy:prod:pull": "bash scripts/deploy.sh --with-git-pull",
+    "deploy:podman": "bash scripts/deploy-podman.sh",
+    "deploy:podman:pull": "bash scripts/deploy-podman.sh --pull"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",

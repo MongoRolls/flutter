@@ -157,6 +157,7 @@ Use `flutter run -v` for verbose output when debugging build or runtime issues.
 ## 工作流
 
 - 遵循 `.cursor/project/README.md` 中的约定或多步骤计划时，按顺序进行，除非有错误或歧义，否则不在步骤之间请求确认
+- **后端 VPS 部署规范**（默认 PM2 + 仅容器跑 DB）：`.cursor/project/backend_deployment_standard.md`
 
 ## 项目结构
 

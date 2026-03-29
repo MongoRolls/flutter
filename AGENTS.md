@@ -163,6 +163,10 @@ Constructor injection only. Pass providers explicitly — no GetIt or service lo
 `dio` for HTTP requests. AI backend calls go through `AiService`.
 The AI API key is injected at build time via `--dart-define=DEEPSEEK_API_KEY=...`.
 
+### Backend / VPS（仓库约定）
+
+生产部署默认 **PM2 + 容器仅 PostgreSQL/Redis**；规范、更新脚本与 Prisma 流程见 `.cursor/project/backend_deployment_standard.md`，命令清单见 `vps_backend_deploy_steps.md`。
+
 ## Testing
 
 - Mirror `lib/` structure in `test/` (e.g., `test/core/providers/user_provider_test.dart`).

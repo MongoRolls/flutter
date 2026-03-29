@@ -203,6 +203,10 @@ npm run db:reset
 | `npm run db:generate` | 重新生成 Prisma Client                   |
 | `npm run db:studio`   | 启动 Prisma Studio (可视化数据库管理)     |
 | `npm run db:reset`    | 重置数据库                               |
+| `npm run deploy:prod` | 生产更新（`npm ci`、迁移、构建、`pm2 reload`） |
+| `npm run deploy:prod:pull` | 同上且先执行 `git pull` |
+| `npm run deploy:podman` | Podman Compose 全栈：`up -d` + `prisma migrate deploy` |
+| `npm run deploy:podman:pull` | 同上且先 `podman-compose pull`（用 ghcr 镜像发版） |
 
 ---
 
@@ -210,6 +214,9 @@ npm run db:reset
 
 ```
 backend/
+├── scripts/
+│   ├── deploy.sh                  # 生产更新（PM2 路径）；见[部署](#部署)
+│   └── deploy-podman.sh           # 生产更新（Podman Compose 全栈）
 ├── prisma/
 │   ├── schema.prisma              # 数据模型定义（7 个模型）
 │   └── migrations/                # 数据库迁移文件
@@ -252,14 +259,15 @@ backend/
 │       └── index.ts               # AuthenticatedRequest 类型定义
 ├── ecosystem.config.cjs           # PM2 进程管理配置
 ├── docker-compose.yml             # 开发环境 PostgreSQL + Redis（podman-compose 兼容）
-├── docker-compose.prod.yml        # 生产环境全栈部署（podman-compose 兼容）
+├── docker-compose.prod.yml        # 生产全栈（镜像变量 KELEME_BACKEND_IMAGE）
+├── docker-compose.prod.local.yml  # 与上一文件合并：本地从 Dockerfile 构建 API
 ├── Dockerfile                     # 生产多阶段构建（podman build 兼容）
 ├── .env.example                   # 环境变量模板
 ├── package.json
 └── tsconfig.json
 ```
 
-> **仓库级文档**（前后端协作、饮水同步与 Prisma 运维摘要）：仓库根目录 `.cursor/project/README.md`（自 `backend/` 为 `../.cursor/project/README.md`）。
+> **仓库级文档**（前后端协作、饮水同步与 Prisma 运维摘要）：仓库根目录 `.cursor/project/README.md`（自 `backend/` 为 `../.cursor/project/README.md`）。**生产部署规范**：`../.cursor/project/backend_deployment_standard.md`。
 
 > **文件命名说明**：`docker-compose.yml` 和 `Dockerfile` 保留原名以兼容 OCI 标准工具链。实际运行时使用 `podman-compose` 和 `podman build`。
 
@@ -341,6 +349,8 @@ backend/
 
 ## 部署
 
+**仓库级规范（默认架构、更新与 Prisma 流程）**：仓库根目录 `.cursor/project/backend_deployment_standard.md`（自 `backend/` 为 `../.cursor/project/backend_deployment_standard.md`）。生产 VPS 默认 **PM2 + 仅容器跑 PostgreSQL/Redis**（`docker-compose.yml`）。
+
 支持三种部署方式，按推荐程度排列：
 
 1. **PM2 部署** — 适合 VPS / 云主机，简单高效，推荐首选
@@ -398,6 +408,19 @@ pm2 startup
 ```
 
 #### 更新部署
+
+**推荐**：使用脚本一键部署（含依赖、迁移、构建、PM2 reload）。
+
+```bash
+cd backend
+./scripts/deploy.sh --with-git-pull   # 含 git pull（VPS 上常用）
+# 或已在该目录手动 git pull 后，只构建与 reload：
+./scripts/deploy.sh
+```
+
+等价：`npm run deploy:prod:pull` / `npm run deploy:prod`。
+
+**等价手写**：
 
 ```bash
 cd backend
@@ -562,24 +585,34 @@ podman-compose down -v
 
 #### Podman Compose 生产全栈部署
 
-使用 `docker-compose.prod.yml` 一键部署完整服务栈：
+**VPS 推荐（免整仓 `git clone`）**：CI 将 API 镜像推送到 **ghcr.io**（见仓库 `.github/workflows/backend-docker.yml`），服务器只保留 `backend/docker-compose.prod.yml`、`.env` 与 `scripts/deploy-podman.sh`（可用 `scp` 同步），在 `.env` 中设置：
+
+- `KELEME_BACKEND_IMAGE=ghcr.io/<owner>/<repo>/keleme-backend:latest`
+- `POSTGRES_PASSWORD`（与 compose 内一致）
+
+私有镜像需先登录：`podman login ghcr.io`（用户名 GitHub，密码为 PAT 或 `GITHUB_TOKEN` 只读权限）。
 
 ```bash
-# 配置生产环境变量
+cd backend
 cp .env.example .env
-# 编辑 .env 设置生产配置
+# 编辑 .env：JWT、DeepSeek、CORS、KELEME_BACKEND_IMAGE、POSTGRES_PASSWORD 等
 
-# 启动全部服务（API + PostgreSQL + Redis）
-podman-compose -f docker-compose.prod.yml up -d
+# 一键：pull（可选）+ up + migrate deploy
+./scripts/deploy-podman.sh --pull
+# 或已是最新镜像：./scripts/deploy-podman.sh
 
-# 执行数据库迁移
-podman-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
-
-# 查看日志
+# 查看日志 / 状态
 podman-compose -f docker-compose.prod.yml logs -f api
-
-# 查看状态
 podman-compose -f docker-compose.prod.yml ps
+```
+
+**本地从源码构建 API 镜像**（不依赖 registry）：
+
+```bash
+cd backend
+podman-compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml up -d --build
+# 默认 KELEME_BACKEND_IMAGE 未设置时使用标签 keleme-backend:local（由 build 产生）
+podman-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
 ```
 
 ### 生产环境完整流程
@@ -603,8 +636,8 @@ npx prisma migrate deploy
 
 # 3. 启动服务（选其一）
 pm2 start ecosystem.config.cjs --env production              # PM2
-# 或
-podman-compose -f docker-compose.prod.yml up -d              # Podman Compose
+# 或（全栈容器，含迁移）
+./scripts/deploy-podman.sh --pull                            # Podman Compose + ghcr 镜像
 ```
 
 > **注意**：生产环境使用 `prisma migrate deploy` 而非 `prisma migrate dev`，前者只执行已有迁移，不会创建新迁移。
