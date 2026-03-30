@@ -10,8 +10,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type DownloadSectionProps = {
-  apkUrl?: string;
-  macosUrl?: string;
+  apkUrl: string;
+  macosUrl: string;
 };
 
 export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
@@ -37,60 +37,31 @@ export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
             <p className="text-xs font-semibold uppercase tracking-widest text-kelem-text-hint">
               立即下载
             </p>
-            {apkUrl ? (
-              <Link
-                href={apkUrl}
-                download
-                aria-label="下载 Android APK 安装包"
-                className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "h-12 w-full gap-2.5 rounded-[14px] shadow-[0_4px_24px_rgba(41,182,246,0.35)]"
-                )}
-              >
-                <Smartphone className="size-5" aria-hidden />
-                Android APK
-              </Link>
-            ) : (
-              <Button
-                type="button"
-                disabled
-                size="lg"
-                className="h-12 w-full rounded-[14px]"
-                aria-disabled="true"
-                title="请在环境变量中配置 NEXT_PUBLIC_DOWNLOAD_APK_URL"
-              >
-                <Smartphone className="size-5" aria-hidden />
-                Android（未配置）
-              </Button>
-            )}
+            <Link
+              href={apkUrl}
+              download
+              aria-label="下载 Android APK 安装包"
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "h-12 w-full gap-2.5 rounded-[14px] shadow-[0_4px_24px_rgba(41,182,246,0.35)]"
+              )}
+            >
+              <Smartphone className="size-5" aria-hidden />
+              Android APK
+            </Link>
 
-            {macosUrl ? (
-              <Link
-                href={macosUrl}
-                download
-                aria-label="下载 macOS 安装包"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "lg" }),
-                  "h-12 w-full gap-2.5 rounded-[14px]"
-                )}
-              >
-                <Apple className="size-5" aria-hidden />
-                macOS dmg
-              </Link>
-            ) : (
-              <Button
-                type="button"
-                disabled
-                variant="outline"
-                size="lg"
-                className="h-12 w-full rounded-[14px]"
-                aria-disabled="true"
-                title="请在环境变量中配置 NEXT_PUBLIC_DOWNLOAD_MACOS_URL"
-              >
-                <Apple className="size-5" aria-hidden />
-                macOS（未配置）
-              </Button>
-            )}
+            <Link
+              href={macosUrl}
+              download
+              aria-label="下载 macOS 应用 zip 压缩包"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "lg" }),
+                "h-12 w-full gap-2.5 rounded-[14px]"
+              )}
+            >
+              <Apple className="size-5" aria-hidden />
+              macOS（zip）
+            </Link>
           </GlassCard>
 
           {/* 即将推出的平台——紧凑小行 */}
@@ -119,18 +90,16 @@ export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
             subtitle="APK 安装包"
             icon={Smartphone}
             iconClassName="text-kelem-green"
-            available={!!apkUrl}
+            available
             href={apkUrl}
-            envHint="NEXT_PUBLIC_DOWNLOAD_APK_URL"
           />
           <PlatformCard
             title="macOS"
-            subtitle="dmg / zip"
+            subtitle="zip 解压后拖入「应用程序」"
             icon={Apple}
             iconClassName="text-kelem-text-secondary"
-            available={!!macosUrl}
+            available
             href={macosUrl}
-            envHint="NEXT_PUBLIC_DOWNLOAD_MACOS_URL"
           />
           <PlatformCard
             title="iOS"

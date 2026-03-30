@@ -267,7 +267,7 @@ backend/
 └── tsconfig.json
 ```
 
-> **仓库级文档**（前后端协作、饮水同步与 Prisma 运维摘要）：仓库根目录 `.cursor/project/README.md`（自 `backend/` 为 `../.cursor/project/README.md`）。**生产部署规范**：`../.cursor/project/backend_deployment_standard.md`。
+> **仓库级文档**（前后端协作、饮水同步与 Prisma 运维摘要）：仓库根目录 `.cursor/project/README.md`（自 `backend/` 为 `../.cursor/project/README.md`）。**生产部署规范**：`../.cursor/project/后端部署规范.md`。
 
 > **文件命名说明**：`docker-compose.yml` 和 `Dockerfile` 保留原名以兼容 OCI 标准工具链。实际运行时使用 `podman-compose` 和 `podman build`。
 
@@ -349,7 +349,7 @@ backend/
 
 ## 部署
 
-**仓库级规范（默认架构、更新与 Prisma 流程）**：仓库根目录 `.cursor/project/backend_deployment_standard.md`（自 `backend/` 为 `../.cursor/project/backend_deployment_standard.md`）。生产 VPS 默认 **PM2 + 仅容器跑 PostgreSQL/Redis**（`docker-compose.yml`）。
+**仓库级规范（默认架构、更新与 Prisma 流程）**：仓库根目录 `.cursor/project/后端部署规范.md`（自 `backend/` 为 `../.cursor/project/后端部署规范.md`）。生产 VPS 默认 **PM2 + 仅容器跑 PostgreSQL/Redis**（`docker-compose.yml`）。
 
 支持三种部署方式，按推荐程度排列：
 

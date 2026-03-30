@@ -1,15 +1,15 @@
 # VPS 后端部署：简洁 Step-by-Step
 
-**规范与默认决策**（必读）：`.cursor/project/backend_deployment_standard.md`。
+**规范与默认决策**（必读）：`.cursor/project/后端部署规范.md`。
 
-面向 **CentOS Stream 9**、**2C2G**、**PM2 + Podman 仅跑 PG/Redis**。可选 **全容器 API**（资源更紧）见 `backend/docker-compose.prod.yml` 与 `backend/README.md`。背景见 `vps_backend_deployment_plan.md`。
+面向 **CentOS Stream 9**、**2C2G**、**PM2 + Podman 仅跑 PG/Redis**。可选 **全容器 API**（资源更紧）见 `backend/docker-compose.prod.yml` 与 `backend/README.md`。背景见 `VPS后端部署规划.md`。
 
 ### 部署顺序怎么排
 
-| 路线 | 顺序 | 说明 |
-|------|------|------|
-| **默认（PM2）** | §1 → §2～§6 → §7 | 先在本机验证 `curl http://127.0.0.1:3000/health`，再配 Nginx。 |
-| **可先 HTTPS** | §1 → **§7.1～§7.4**（占位）→ §2～§6 → **§7.5**（反代） | VPS 上尚未 `git clone`、没有 Node 时，也可先申请证书、浏览器看到占位 `ok`；**反代与 SSE** 必须等 **§6 PM2 起来** 再做。 |
+| 路线            | 顺序                                                   | 说明                                                                                                                    |
+| --------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| **默认（PM2）** | §1 → §2～§6 → §7                                       | 先在本机验证 `curl http://127.0.0.1:3000/health`，再配 Nginx。                                                          |
+| **可先 HTTPS**  | §1 → **§7.1～§7.4**（占位）→ §2～§6 → **§7.5**（反代） | VPS 上尚未 `git clone`、没有 Node 时，也可先申请证书、浏览器看到占位 `ok`；**反代与 SSE** 必须等 **§6 PM2 起来** 再做。 |
 
 全容器 + ghcr 镜像的替代路径（`docker-compose.prod.yml`、`deploy-podman.sh` 等）见 **`backend/README.md`**，本文默认路线不再单独展开。
 
@@ -137,8 +137,6 @@ pm2 startup
 
 验证：
 
-
-
 ```bash
 curl -s http://127.0.0.1:3000/health
 ```
@@ -238,6 +236,15 @@ curl -s https://api.你的域名/health
 sudo certbot renew --dry-run
 ```
 
+### 7.7 Nginx 故障与参考配置
+
+- **占位仍返回 `ok`**：`443` 的 `location /` 仍是 `return 200 "ok"`，未 `proxy_pass` 到 `127.0.0.1:3000`。
+- **`proxy_pass` duplicate**：同一 `location` 里写了两次 `proxy_pass`，多为 **`location /api/ai/chat {` 少了闭合 `}`**，导致与 `location /` 合并。用 `sudo cat -n ...` 核对括号。
+- **`xy_set_header`**：拼写错误，应为 **`proxy_set_header`**。
+- **`duplicate upstream`**：其它 `.conf` 已定义同名 `upstream`，可删掉参考文件里的 `upstream` 块，并把 `proxy_pass http://keleme_api` 改为 `http://127.0.0.1:3000`。
+
+仓库内 **可直接覆盖** 的示例：`/.cursor/project/nginx-api.mongorolls.cn.conf`（与 `backend/README.md` 中反代片段一致；部署后执行 `nginx -t`）。
+
 ---
 
 ## 8. Flutter 生产包
@@ -247,6 +254,32 @@ sudo certbot renew --dry-run
 ```bash
 --dart-define=BACKEND_URL=https://api.你的域名
 ```
+
+**示例（当前线上 API）：** `https://api.mongorolls.cn`
+
+所有命令均在仓库 **`flutter/`** 目录下执行（`cd flutter`）。
+
+**本地开发联调同一后端：**
+
+```bash
+flutter run -d macos --dart-define=BACKEND_URL=https://api.mongorolls.cn
+# 或 Web：flutter run -d chrome --dart-define=BACKEND_URL=https://api.mongorolls.cn
+```
+
+**macOS 正式版打包（Release，产物在 `build/macos/Build/Products/Release/`）：**
+
+```bash
+flutter build macos --dart-define=BACKEND_URL=https://api.mongorolls.cn
+```
+
+**Android 正式 APK（与 CI 一致，可再加 `--split-per-abi`）：**
+
+```bash
+flutter build apk --dart-define=BACKEND_URL=https://api.mongorolls.cn
+# 若同时需要 DeepSeek 代理，再加：--dart-define=DEEPSEEK_API_KEY=...
+```
+
+`BackendApiService` 会读取编译期 `BACKEND_URL`；若曾在 App 内保存过自定义 base URL（`SharedPreferences`），会优先用已保存值，联调前可在设置里清掉或卸载重装。
 
 ---
 

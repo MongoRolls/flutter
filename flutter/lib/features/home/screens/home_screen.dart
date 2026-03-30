@@ -23,6 +23,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  static const List<String> _weekdayLabels = [
+    '日',
+    '一',
+    '二',
+    '三',
+    '四',
+    '五',
+    '六',
+  ];
+
   late AnimationController _ringAnimController;
   late Animation<double> _ringAnim;
   late AnimationController _entranceController;
@@ -756,11 +766,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final today = now.day;
     final monthlyHits = _p.monthlyHits;
     final goalMl = _p.profile.dailyGoalMl;
-    // 获取本月天数
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    // 达标天数
+    final firstOfMonth = DateTime(now.year, now.month, 1);
+    // 周日起：Dart weekday 周一=1…周日=7 → 周日列索引 0
+    final leading = firstOfMonth.weekday % 7;
+    final totalSlots = leading + daysInMonth;
+    final rowCount = (totalSlots + 6) ~/ 7;
+
     final achievedDays = monthlyHits.entries
-        .where((e) => e.key < today && e.value >= goalMl)
+        .where((e) => e.key <= today && e.value >= goalMl)
         .length;
 
     return GlassCard(
@@ -798,67 +812,124 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 5,
-            runSpacing: 5,
-            children: List.generate(daysInMonth, (i) {
-              final d = i + 1;
-              Color textColor;
-              BoxDecoration deco;
-              final dayMl = monthlyHits[d] ?? 0;
-              final achieved = dayMl >= goalMl;
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 4.0;
+              final maxW = constraints.maxWidth;
+              final cellW = (maxW - spacing * 6) / 7;
+              final cellSize = cellW.clamp(26.0, 36.0);
 
-              if (d == today) {
-                deco = BoxDecoration(
-                  color: AppColors.blue,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.blue.withValues(alpha: 0.4),
-                      blurRadius: 8,
-                    ),
-                  ],
-                );
-                textColor = Colors.white;
-              } else if (d < today && achieved) {
-                deco = BoxDecoration(
-                  color: AppColors.blueLight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.blueBorder),
-                );
-                textColor = AppColors.blue;
-              } else if (d < today) {
-                deco = BoxDecoration(
-                  color: AppColors.bgSection,
-                  borderRadius: BorderRadius.circular(8),
-                );
-                textColor = AppColors.textHint;
-              } else {
-                deco = BoxDecoration(
-                  color: AppColors.bgSection,
-                  borderRadius: BorderRadius.circular(8),
-                );
-                textColor = AppColors.divider;
-              }
+              Widget streakDayCell(int d) {
+                Color textColor;
+                BoxDecoration deco;
+                final dayMl = monthlyHits[d] ?? 0;
+                final achieved = dayMl >= goalMl;
 
-              return Container(
-                width: 34,
-                height: 34,
-                decoration: deco,
-                child: Center(
-                  child: Text(
-                    '$d',
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 11,
-                      fontWeight: d == today
-                          ? FontWeight.w700
-                          : FontWeight.w400,
-                      color: textColor,
+                if (d == today) {
+                  deco = BoxDecoration(
+                    color: AppColors.blue,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.blue.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  );
+                  textColor = Colors.white;
+                } else if (d < today && achieved) {
+                  deco = BoxDecoration(
+                    color: AppColors.blueLight,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.blueBorder),
+                  );
+                  textColor = AppColors.blue;
+                } else if (d < today) {
+                  deco = BoxDecoration(
+                    color: AppColors.bgSection,
+                    borderRadius: BorderRadius.circular(8),
+                  );
+                  textColor = AppColors.textHint;
+                } else {
+                  deco = BoxDecoration(
+                    color: AppColors.bgSection,
+                    borderRadius: BorderRadius.circular(8),
+                  );
+                  textColor = AppColors.textHint;
+                }
+
+                return Container(
+                  width: cellSize,
+                  height: cellSize,
+                  decoration: deco,
+                  child: Center(
+                    child: Text(
+                      '$d',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 10,
+                        fontWeight: d == today
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                        color: textColor,
+                      ),
                     ),
                   ),
+                );
+              }
+
+              Widget emptyCell() => SizedBox(width: cellSize, height: cellSize);
+
+              Widget slotAt(int r, int c) {
+                final idx = r * 7 + c;
+                if (idx < leading) return emptyCell();
+                final d = idx - leading + 1;
+                if (d > daysInMonth) return emptyCell();
+                return streakDayCell(d);
+              }
+
+              final gridRows = <Widget>[];
+              gridRows.add(
+                Row(
+                  children: [
+                    for (int c = 0; c < 7; c++) ...[
+                      if (c > 0) SizedBox(width: spacing),
+                      SizedBox(
+                        width: cellSize,
+                        child: Center(
+                          child: Text(
+                            _weekdayLabels[c],
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textHint,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               );
-            }),
+              gridRows.add(SizedBox(height: spacing + 2));
+
+              for (var r = 0; r < rowCount; r++) {
+                gridRows.add(
+                  Row(
+                    children: [
+                      for (int c = 0; c < 7; c++) ...[
+                        if (c > 0) SizedBox(width: spacing),
+                        slotAt(r, c),
+                      ],
+                    ],
+                  ),
+                );
+                if (r < rowCount - 1) {
+                  gridRows.add(SizedBox(height: spacing));
+                }
+              }
+
+              return Column(children: gridRows);
+            },
           ),
           const SizedBox(height: 10),
           Row(

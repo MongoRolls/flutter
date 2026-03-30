@@ -90,6 +90,15 @@ class DrinkSyncService {
   /// 是否正在同步队列
   bool _isSyncingQueue = false;
 
+  /// After [SharedPreferences.clear], prefs-backed queues are empty but in-memory
+  /// counters may still reflect the old session — reset for consistency.
+  void resetInMemoryCounters() {
+    _lastSyncAt = null;
+    _pendingSyncCount = 0;
+    _failedCount = 0;
+    _isSyncingQueue = false;
+  }
+
   /// 同步当月饮水数据
   /// 在 [UserProvider.loadProfile] 完成后调用
   Future<void> syncMonthlyLogs() async {

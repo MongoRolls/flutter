@@ -1,10 +1,14 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
-import '../../../core/models/memory_fact.dart';
-import '../../../core/services/memory_service.dart';
 import '../../../common/widgets/app_confirm_dialog.dart';
+import '../../../common/widgets/app_toast.dart';
 import '../../../common/widgets/glass_card.dart';
+import '../../../core/models/memory_fact.dart';
+import '../../../core/services/backend_api_service.dart';
+import '../../../core/services/memory_service.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/backend_api_error_message.dart';
 
 class HealthArchiveScreen extends StatefulWidget {
   const HealthArchiveScreen({super.key});
@@ -205,25 +209,7 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
                     color: AppColors.divider,
                     margin: const EdgeInsets.symmetric(vertical: 4),
                   ),
-                Dismissible(
-                  key: Key(fact.id),
-                  direction: DismissDirection.endToStart,
-                  confirmDismiss: (_) => _confirmDelete(fact),
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
-                      size: 20,
-                    ),
-                  ),
-                  child: _buildFactTile(fact),
-                ),
+                _buildFactTile(fact),
               ],
             );
           }),
@@ -295,12 +281,26 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: () => _deleteFact(fact),
+            icon: const Icon(Icons.delete_outline, size: 20),
+            tooltip: '删除',
+            style: IconButton.styleFrom(
+              foregroundColor: AppColors.textHint,
+              highlightColor: AppColors.red.withValues(alpha: 0.12),
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            visualDensity: VisualDensity.compact,
+          ),
         ],
       ),
     );
   }
 
-  Future<bool> _confirmDelete(MemoryFact fact) async {
+  /// 二次确认后硬删除；已登录时先调后端再删本地（见 OpenSpec health-archive-delete）。
+  Future<void> _deleteFact(MemoryFact fact) async {
     final confirmed = await showAppConfirmDialog(
       context: context,
       title: '删除记录',
@@ -311,17 +311,36 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
       isDestructive: true,
     );
 
-    if (confirmed == true) {
+    if (confirmed != true) return;
+
+    final backend = BackendApiService.instance;
+    if (backend.isAuthenticated) {
       try {
-        await MemoryService.instance.deleteFact(fact.id);
+        await backend.deleteMemoryFact(fact.id);
+      } on DioException catch (e) {
+        final code = e.response?.statusCode;
+        if (code != 404) {
+          if (!mounted) return;
+          AppToast.error(context, backendApiErrorMessage(e));
+          return;
+        }
       } catch (e) {
-        debugPrint('Error deleting fact: $e');
+        if (!mounted) return;
+        AppToast.error(context, backendApiErrorMessage(e));
+        return;
       }
-      if (!mounted) return false;
-      _loadFacts();
-      return true;
     }
-    return false;
+
+    try {
+      await MemoryService.instance.deleteFact(fact.id);
+    } catch (e) {
+      debugPrint('Error deleting fact: $e');
+      if (!mounted) return;
+      AppToast.error(context, '删除失败');
+      return;
+    }
+    if (!mounted) return;
+    _loadFacts();
   }
 
   String _formatDate(DateTime dt) {

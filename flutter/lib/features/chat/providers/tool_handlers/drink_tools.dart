@@ -7,7 +7,9 @@ List<FunctionDefinition> createDrinkTools(UserProvider userProvider) {
   return [
     FunctionDefinition(
       name: 'add_drink',
-      description: '帮用户记录喝水量',
+      description:
+          '在用户明确要记录本次饮水、且能确定毫升数（或明确说一杯/一瓶等可换算）时调用。'
+          '禁止因消息里单独出现数字就调用；意图不清时先文字确认，不要调用本工具。',
       parameters: {
         'type': 'object',
         'properties': {

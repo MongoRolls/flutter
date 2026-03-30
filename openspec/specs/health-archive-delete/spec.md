@@ -1,0 +1,35 @@
+# health-archive-delete Specification
+
+## Purpose
+TBD - created by archiving change monthly-calendar-care-health-archive. Update Purpose after archive.
+## Requirements
+### Requirement: 健康档案单条删除（确认 + 硬删除）
+
+AI 健康档案界面 MUST 允许用户删除单条档案记录。删除前 MUST 展示二次确认；用户确认后 MUST 执行硬删除（无回收站）。若用户取消确认，MUST NOT 修改任何数据。
+
+#### Scenario: 确认后删除
+
+- **WHEN** 档案列表存在至少一条记录且用户发起删除并确认
+- **THEN** 该条记录从界面消失且持久化删除生效
+
+#### Scenario: 取消不删除
+
+- **WHEN** 用户发起删除但在确认对话框中选择取消
+- **THEN** 该条记录仍存在且数据不变
+
+---
+
+### Requirement: 已同步云端时删除须同步后端
+
+当应用已登录且档案事实已与后端同步（或存在服务端副本）时，删除操作 MUST 先调用后端 `DELETE /api/memory/:id`（或等价路径）；仅在服务端返回成功（如 HTTP 204）后 MUST 从本地存储移除该条。若请求失败，MUST 向用户展示明确错误信息，且默认 MUST NOT 仅删除本地而留下云端副本（除非后续需求另行规定）。
+
+#### Scenario: 云端删除成功后再删本地
+
+- **WHEN** 用户确认删除一条已同步的记忆事实且后端返回成功
+- **THEN** 本地 Hive（或等价存储）中该 id 的记录被移除
+
+#### Scenario: 云端删除失败
+
+- **WHEN** 用户确认删除但后端返回错误或网络失败
+- **THEN** 用户看到错误提示且本地记录默认保留
+

@@ -1,10 +1,10 @@
 # VPS 部署计划（后端 + 域名 + 客户端）
 
-**规范（默认架构与迁移流程）**：`.cursor/project/backend_deployment_standard.md`。
+**规范（默认架构与迁移流程）**：`.cursor/project/后端部署规范.md`。
 
 面向 **CentOS Stream 9**、约 **2C2G** 香港 VPS；后端为 `backend/`（Node 20 + PM2 + PostgreSQL + Redis）。按顺序执行，前一步正常再进下一步。
 
-**详细命令与 Nginx 片段**：见 `backend/README.md` 部署章节；**逐步命令清单**：`vps_backend_deploy_steps.md`。
+**详细命令与 Nginx 片段**：见 `backend/README.md` 部署章节；**逐步命令清单**：`VPS后端部署步骤.md`。
 
 ---
 
@@ -26,7 +26,7 @@
 3. **防火墙**：放行 **22**（SSH）、**80/443**（HTTP/HTTPS）；若暂时直连调试 **3000**，仅建议内网或短期，生产用 Nginx。
 4. **内存（2G 建议）**：配置 **swap** 1–2G，降低 OOM 风险。
 5. **容器运行时**  
-   - 安装 **Podman** + **podman-compose**（与 `vps_backend_deploy_steps.md` §1 一致），用 `backend/docker-compose.yml` 起 PG + Redis（命令为 `podman-compose up -d`）。  
+   - 安装 **Podman** + **podman-compose**（与 `VPS后端部署步骤.md` §1 一致），用 `backend/docker-compose.yml` 起 PG + Redis（命令为 `podman-compose up -d`）。  
    - 不打算用容器装数据库时，可改为 **本机安装** PostgreSQL 16 与 Redis 7（需自行对齐 `DATABASE_URL` / `REDIS_URL`）。
 
 ---
@@ -73,7 +73,10 @@
 ## Phase 5：客户端（Flutter）
 
 1. 生产构建时传入 **`BACKEND_URL`**，与 HTTPS 根地址一致，**无路径后缀**：  
-   `--dart-define=BACKEND_URL=https://api.example.com`
+   `--dart-define=BACKEND_URL=https://api.example.com`  
+   当前线上示例：`https://api.mongorolls.cn`；在 `flutter/` 下例如：  
+   `flutter build macos --dart-define=BACKEND_URL=https://api.mongorolls.cn`  
+   开发联调：`flutter run -d macos --dart-define=BACKEND_URL=https://api.mongorolls.cn`（详见 `VPS后端部署步骤.md` §8）。
 2. 确认手机网络可访问该域名（无自签证书错误）。
 3. 可选：在 App 内提供「服务器地址」设置并调用 `BackendApiService.setBaseUrl`（需产品化时再实现）。
 
@@ -104,4 +107,4 @@
 
 ---
 
-*文档版本：与 `backend_deployment_standard.md`、`backend/README.md` 部署章节配套使用。*
+*文档版本：与 `后端部署规范.md`、`backend/README.md` 部署章节配套使用。*

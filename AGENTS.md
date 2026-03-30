@@ -165,7 +165,7 @@ The AI API key is injected at build time via `--dart-define=DEEPSEEK_API_KEY=...
 
 ### Backend / VPS（仓库约定）
 
-生产部署默认 **PM2 + 容器仅 PostgreSQL/Redis**；规范、更新脚本与 Prisma 流程见 `.cursor/project/backend_deployment_standard.md`，命令清单见 `vps_backend_deploy_steps.md`。
+生产部署默认 **PM2 + 容器仅 PostgreSQL/Redis**；规范、更新脚本与 Prisma 流程见 `.cursor/project/后端部署规范.md`，命令清单见 `VPS后端部署步骤.md`。
 
 ## Testing
 

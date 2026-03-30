@@ -8,8 +8,8 @@ import { WorkflowSection } from "@/components/sections/workflow-section";
 import { SiteHeader } from "@/components/site-header";
 
 export type LandingPageProps = {
-  apkUrl?: string;
-  macosUrl?: string;
+  apkUrl: string;
+  macosUrl: string;
 };
 
 export function LandingPage({ apkUrl, macosUrl }: LandingPageProps) {

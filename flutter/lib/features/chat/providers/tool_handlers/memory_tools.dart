@@ -8,7 +8,9 @@ List<FunctionDefinition> createMemoryTools() {
   return [
     FunctionDefinition(
       name: 'save_health_note',
-      description: '保存用户的健康信息、偏好或习惯到长期记忆中。发现用户提到明确的健康信息时主动调用。',
+      description:
+          '将用户明确陈述的可归档健康信息、偏好或习惯写入长期记忆。'
+          '勿保存闲聊碎片或不确定内容；未明确同意归档时不要调用。',
       parameters: {
         'type': 'object',
         'properties': {

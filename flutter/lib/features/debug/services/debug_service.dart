@@ -9,6 +9,7 @@ import '../../../core/providers/user_provider.dart';
 import '../../../core/services/backend_api_service.dart';
 import '../../../core/services/drink_sync_service.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../features/plan/models/today_plan.dart';
 
 enum TestStatus { success, failure, info }
 
@@ -311,17 +312,37 @@ class DebugService {
         } catch (_) {}
       }
 
-      // 5. 取消所有通知
+      // 5. 清空 Hive：今日计划（today_plans）
+      if (Hive.isBoxOpen('today_plans')) {
+        await Hive.box<TodayPlan>('today_plans').clear();
+      } else {
+        final box = await Hive.openBox<TodayPlan>('today_plans');
+        await box.clear();
+      }
+
+      // 6. 取消所有通知
       await NotificationService.instance.cancelAll();
 
-      // 6. 重置 provider 内存状态
+      // 7. 后端单例内存与磁盘一致（prefs 已 clear，否则仍持有旧 JWT）
+      await BackendApiService.instance.resetLocalAuthState();
+      DrinkSyncService.instance.resetInMemoryCounters();
+
+      // 8. 冷启动外不会再次执行 main 里的 ensureAuthenticated — 这里重新 deviceLogin
+      try {
+        await BackendApiService.instance.ensureAuthenticated();
+      } catch (e) {
+        debugPrint('Debug clearAllData: ensureAuthenticated failed: $e');
+      }
+
+      // 9. 重置 provider 内存状态
       provider.updateProfile(UserProfile());
 
       return TestResult(
         status: TestStatus.success,
         label: '重置全部数据',
         message: '所有数据已完全清除，即将返回引导页',
-        detail: '已清空：用户档案、饮水记录、历史归档、健康档案、会话摘要、自定义提醒、通知',
+        detail:
+            '已清空：用户档案、饮水记录、历史归档、健康档案、会话摘要、今日计划、自定义提醒、通知；已重置后端会话并尝试重新登录',
         timestamp: DateTime.now(),
       );
     } catch (e, st) {

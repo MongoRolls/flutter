@@ -38,12 +38,17 @@ class _TodayPlanParsed {
 
   factory _TodayPlanParsed.fromMap(Map<String, dynamic> m) {
     final rawSlots = m['slots'] as List? ?? [];
+    final slots = <PlanTimeSlot>[];
+    for (final e in rawSlots) {
+      if (e is! Map) {
+        throw FormatException('slot entry is not an object: $e');
+      }
+      slots.add(PlanTimeSlot.fromMap(Map<String, dynamic>.from(e)));
+    }
     return _TodayPlanParsed(
-      summary: m['summary'] as String? ?? '',
+      summary: m['summary']?.toString() ?? '',
       totalMl: (m['totalMl'] as num?)?.toInt() ?? 2000,
-      slots: rawSlots
-          .map((e) => PlanTimeSlot.fromMap(e as Map<String, dynamic>))
-          .toList(),
+      slots: slots,
     );
   }
 }
@@ -209,10 +214,18 @@ class PlanProvider extends ChangeNotifier {
       service.dispose();
 
       // 流结束后解析 JSON
+      if (streamingText.trim().isEmpty) {
+        status = PlanStatus.parseError;
+        errorMessage = '模型未返回内容，请重试（可查看控制台 PlanProvider 日志）';
+        debugPrint('PlanProvider.generatePlan: streamingText empty');
+        notifyListeners();
+        return;
+      }
+
       final parsed = _parseJson(streamingText);
       if (parsed == null) {
         status = PlanStatus.parseError;
-        errorMessage = 'AI 返回格式异常，请重试';
+        errorMessage = 'AI 返回格式异常，请重试（终端会打印原始片段便于排查）';
         notifyListeners();
         return;
       }
@@ -377,13 +390,24 @@ class PlanProvider extends ChangeNotifier {
 
     final start = candidate.indexOf('{');
     final end = candidate.lastIndexOf('}');
-    if (start == -1 || end == -1 || end <= start) return null;
+    if (start == -1 || end == -1 || end <= start) {
+      debugPrint(
+        'PlanProvider._parseJson: no JSON braces. raw(len=${raw.length})='
+        '${raw.length > 600 ? "${raw.substring(0, 600)}..." : raw}',
+      );
+      return null;
+    }
+    final jsonSlice = candidate.substring(start, end + 1);
     try {
-      final obj =
-          jsonDecode(candidate.substring(start, end + 1))
-              as Map<String, dynamic>;
+      final obj = jsonDecode(jsonSlice) as Map<String, dynamic>;
       return _TodayPlanParsed.fromMap(obj);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('PlanProvider._parseJson: decode/fromMap failed: $e');
+      debugPrint('$st');
+      debugPrint(
+        'PlanProvider._parseJson: jsonSlice(len=${jsonSlice.length})='
+        '${jsonSlice.length > 1200 ? "${jsonSlice.substring(0, 1200)}..." : jsonSlice}',
+      );
       return null;
     }
   }

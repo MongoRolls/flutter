@@ -28,7 +28,9 @@ List<FunctionDefinition> createProfileTools(UserProvider userProvider) {
     ),
     FunctionDefinition(
       name: 'update_daily_goal',
-      description: '调整用户每日饮水目标',
+      description:
+          '仅在用户明确要修改「每日饮水目标」时调用。'
+          '勿因闲聊中出现的数字就修改目标。',
       parameters: {
         'type': 'object',
         'properties': {

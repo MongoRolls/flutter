@@ -2,6 +2,17 @@
 
 本目录存放**与仓库协作、运维相关的说明**。业务与代码规范见仓库根目录 `AGENTS.md`、`CLAUDE.md`。
 
+**全库文档目录与元信息**（含根目录、Flutter/Backend/Web、OpenSpec 等）：见 **[`文档索引.md`](文档索引.md)**。
+
+### 文档文件名迁移（2026-03）
+
+| 旧文件名 | 新文件名 |
+|----------|----------|
+| `backend_deployment_standard.md` | `后端部署规范.md` |
+| `vps_backend_deploy_steps.md` | `VPS后端部署步骤.md` |
+| `vps_backend_deployment_plan.md` | `VPS后端部署规划.md` |
+| `ke_le_me_product_documentation.md` | `渴了么产品文档.md` |
+
 ---
 
 ## 1. 仓库结构
@@ -36,8 +47,8 @@
 
 ## 3. 后端生产部署（规范）
 
-- **默认约定（必读）**：`backend_deployment_standard.md` — **PM2 + 容器仅跑 PostgreSQL/Redis**（2C2G 友好）；代码上机 **git clone/pull**；更新推荐 `backend/scripts/deploy.sh`。
-- **命令清单**：`vps_backend_deploy_steps.md`；**分阶段计划**：`vps_backend_deployment_plan.md`。
+- **默认约定（必读）**：`后端部署规范.md` — **PM2 + 容器仅跑 PostgreSQL/Redis**（2C2G 友好）；代码上机 **git clone/pull**；更新推荐 `backend/scripts/deploy.sh`。
+- **命令清单**：`VPS后端部署步骤.md`；**分阶段计划**：`VPS后端部署规划.md`。
 
 ---
 
@@ -54,9 +65,11 @@
 | 文件 | 用途 |
 |------|------|
 | `README.md` | 本索引与现状摘要（**主文档**） |
-| `backend_deployment_standard.md` | **后端 VPS 部署规范**（默认架构与 Prisma 流程） |
-| `vps_backend_deployment_plan.md` | VPS 部署的**分阶段计划**（说明较全） |
-| `vps_backend_deploy_steps.md` | **简洁 Step-by-Step** 命令清单（与 `backend/README.md` 配套） |
+| `文档索引.md` | **仓库级文档清单**（路径、说明、维护元信息；含 OpenSpec / README 等） |
+| `后端部署规范.md` | **后端 VPS 部署规范**（默认架构与 Prisma 流程） |
+| `VPS后端部署规划.md` | VPS 部署的**分阶段计划**（说明较全） |
+| `VPS后端部署步骤.md` | **简洁 Step-by-Step** 命令清单（与 `backend/README.md` 配套） |
+| `渴了么产品文档.md` | 产品说明与能力摘要（与代码对齐时维护） |
 | `prisma_checksum_fix.sql` | Prisma `_prisma_migrations.checksum` 修复 SQL 模板 |
 | `calculate_prisma_checksums.sh` | 在空库上计算各迁移 checksum 的辅助脚本 |
 

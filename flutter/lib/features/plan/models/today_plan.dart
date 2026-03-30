@@ -81,11 +81,20 @@ class PlanTimeSlot {
     required this.note,
   });
 
-  factory PlanTimeSlot.fromMap(Map<String, dynamic> m) => PlanTimeSlot(
-    time: m['time'] as String,
-    ml: m['ml'] as int,
-    note: m['note'] as String,
-  );
+  factory PlanTimeSlot.fromMap(Map<String, dynamic> m) {
+    int parseMl(dynamic v) {
+      if (v == null) return 0;
+      if (v is int) return v;
+      if (v is num) return v.round();
+      return int.tryParse(v.toString()) ?? 0;
+    }
+
+    return PlanTimeSlot(
+      time: m['time']?.toString() ?? '',
+      ml: parseMl(m['ml']),
+      note: m['note']?.toString() ?? '',
+    );
+  }
 
   Map<String, dynamic> toMap() => {'time': time, 'ml': ml, 'note': note};
 }

@@ -526,7 +526,7 @@ class _DebugScreenState extends State<DebugScreen> {
             isDestructive: true,
             onTap: () => _runTestWithConfirm(
               '重置全部数据',
-              '确认重置所有数据？此操作不可恢复，将返回引导页。\n\n将清空：用户档案、饮水记录、健康档案、会话摘要、自定义提醒。',
+              '确认重置所有数据？此操作不可恢复，将返回引导页。\n\n将清空：用户档案、饮水记录、健康档案、会话摘要、今日计划、自定义提醒，并重置后端登录状态。',
               () async {
                 final result = await DebugService.instance.clearAllData(_p);
                 if (mounted) {

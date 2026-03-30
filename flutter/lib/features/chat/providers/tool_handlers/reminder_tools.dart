@@ -10,7 +10,9 @@ List<FunctionDefinition> createReminderTools() {
   return [
     FunctionDefinition(
       name: 'set_reminder',
-      description: '为用户设置一个自定义提醒（如体检、吃药、特定时间喝水等）',
+      description:
+          '在用户明确需要定时提醒（体检、吃药、某时刻喝水等）时调用。'
+          '勿把随意数字或闲聊当作提醒时间；时间或意图不清时先文字确认，不要调用。',
       parameters: {
         'type': 'object',
         'properties': {

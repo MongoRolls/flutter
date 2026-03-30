@@ -1,0 +1,41 @@
+# home-monthly-streak-calendar Specification
+
+## Purpose
+TBD - created by archiving change monthly-calendar-care-health-archive. Update Purpose after archive.
+## Requirements
+### Requirement: 本月打卡周历布局（周日起）
+
+首页「本月打卡」卡片 MUST 以自然周历形式展示当前月：列为周日到周六共 7 列；本月 1 号 MUST 出现在与其星期对应的列，其左侧列 MUST 为空白占位（不显示日期数字）。
+
+#### Scenario: 1 号非周日时出现前导空白
+
+- **WHEN** 用户查看首页「本月打卡」且本月 1 号不是星期日
+- **THEN** 第一行中 1 号之前的格子为空白占位，且 1 号出现在正确星期列
+
+#### Scenario: 周列顺序
+
+- **WHEN** 用户查看「本月打卡」网格任意一行
+- **THEN** 从左到右七列分别对应星期日至星期六
+
+---
+
+### Requirement: 未来日期数字可读
+
+对于当前月中**尚未到来**的日期格子，应用 MUST 仍显示对应日数字，且数字与背景的对比度 MUST 达到可读水平（MUST NOT 使用与分割线同档的极低对比色作为唯一文字色）。
+
+#### Scenario: 未来日期仍显示数字
+
+- **WHEN** 当前日期不是本月最后一天
+- **THEN** 所有晚于「今天」的日期格仍显示其日序号，且肉眼可辨
+
+---
+
+### Requirement: 本月达标天数统计一致
+
+「本月 X 天达标」所统计的天数 MUST 与图例含义一致：在统计时刻，已过去的日期与「今天」若饮水总量达到日目标 MUST 计入达标天数；严格晚于今天的日期 MUST NOT 计入。
+
+#### Scenario: 今日达标计入
+
+- **WHEN** 今天的饮水总量已达到日目标且用户查看「本月打卡」底部汇总
+- **THEN** 「本月 X 天达标」中的 X 包含今天
+

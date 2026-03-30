@@ -7,7 +7,6 @@ import '../../../core/services/backend_api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/backend_api_error_message.dart';
 import '../models/care_contact.dart';
-import 'scan_friend_code_screen.dart';
 
 /// 添加关怀联系人页面（结构化表单：好友码、关系、备注、头像）
 class AddContactScreen extends StatefulWidget {
@@ -32,18 +31,6 @@ class _AddContactScreenState extends State<AddContactScreen> {
     _friendCodeController.dispose();
     _nameController.dispose();
     super.dispose();
-  }
-
-  Future<void> _openScan() async {
-    if (!supportsFriendCodeScan) {
-      AppToast.info(context, '当前设备请使用输入框输入好友短码');
-      return;
-    }
-    final code = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const ScanFriendCodeScreen()),
-    );
-    if (!mounted || code == null || code.isEmpty) return;
-    setState(() => _friendCodeController.text = code);
   }
 
   String _resolveNickname(String trimmedRemark, Map<String, dynamic> lookup) {
@@ -118,48 +105,28 @@ class _AddContactScreenState extends State<AddContactScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _friendCodeController,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 12,
-                  decoration: InputDecoration(
-                    hintText: '输入或扫码（例如 AB3K9Q）',
-                    counterText: '',
-                    filled: true,
-                    fillColor: AppColors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.divider),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.divider),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.blue),
-                    ),
-                  ),
-                ),
+          TextField(
+            controller: _friendCodeController,
+            textCapitalization: TextCapitalization.characters,
+            maxLength: 12,
+            decoration: InputDecoration(
+              hintText: '输入好友短码（例如 AB3K9Q）',
+              counterText: '',
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.divider),
               ),
-              const SizedBox(width: 10),
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: IconButton.filled(
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppColors.blueLight,
-                    foregroundColor: AppColors.blueDark,
-                  ),
-                  onPressed: _openScan,
-                  icon: const Icon(Icons.qr_code_scanner_rounded),
-                  tooltip: '扫码添加',
-                ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.divider),
               ),
-            ],
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.blue),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
 

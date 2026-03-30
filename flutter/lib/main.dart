@@ -100,6 +100,7 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
           : OnboardingScreen(userProvider: _userProvider),
       routes: {
         '/onboarding': (_) => OnboardingScreen(userProvider: _userProvider),
+        '/home': (_) => MainShell(userProvider: _userProvider),
         '/debug': (_) => DebugScreen(userProvider: _userProvider),
       },
     );

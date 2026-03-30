@@ -71,6 +71,7 @@ coverage/
 # --- Node / Next (monorepo: web/, backend/ 等) ---
 node_modules/
 .next/
+.next/*
 out/
 dist/
 *.tsbuildinfo

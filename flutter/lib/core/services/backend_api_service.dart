@@ -16,9 +16,12 @@ class BackendApiService {
   static const _refreshTokenKey = 'backend_refresh_token';
   static const _deviceIdKey = 'backend_device_id';
 
-  static const _defaultBaseUrl = String.fromEnvironment(
+  static const _defaultLocalBaseUrl = 'http://localhost:3000';
+
+  /// Compile-time API root (use `--dart-define=BACKEND_URL=https://api.example.com`).
+  static const _compiledBaseUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: _defaultLocalBaseUrl,
   );
 
   late final Dio _dio;
@@ -40,21 +43,54 @@ class BackendApiService {
     final prefs = await SharedPreferences.getInstance();
     final savedUrl = prefs.getString(_baseUrlKey);
 
-    _dio = Dio(BaseOptions(
-      baseUrl: savedUrl ?? _defaultBaseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 60),
-      headers: {'Content-Type': 'application/json'},
-    ));
+    // 若编译时指定了非 localhost 的 BACKEND_URL，优先使用（避免本地 prefs 覆盖联调地址）。
+    final effectiveBaseUrl = _compiledBaseUrl != _defaultLocalBaseUrl
+        ? _compiledBaseUrl
+        : (savedUrl ?? _compiledBaseUrl);
 
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: _onRequest,
-      onError: _onError,
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: effectiveBaseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 60),
+        headers: {'Content-Type': 'application/json'},
+      ),
+    );
+
+    _dio.interceptors.add(
+      InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
+    );
 
     _accessToken = prefs.getString(_accessTokenKey);
     _refreshToken = prefs.getString(_refreshTokenKey);
     _deviceId = prefs.getString(_deviceIdKey);
+
+    debugPrint(
+      'BackendApiService: baseUrl=$effectiveBaseUrl '
+      '(${_compiledBaseUrl != _defaultLocalBaseUrl ? "dart-define" : (savedUrl != null ? "prefs" : "default localhost")})',
+    );
+  }
+
+  /// Clears in-memory JWT/device id and realigns [Dio] base URL after prefs wipe.
+  ///
+  /// [SharedPreferences.clear] removes token keys from disk, but this singleton
+  /// still holds stale values until this runs — otherwise requests keep using old
+  /// Bearer tokens or miss auth after a local reset without process restart.
+  Future<void> resetLocalAuthState() async {
+    _accessToken = null;
+    _refreshToken = null;
+    _deviceId = null;
+    _refreshCompleter = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    final savedUrl = prefs.getString(_baseUrlKey);
+    final effectiveBaseUrl = _compiledBaseUrl != _defaultLocalBaseUrl
+        ? _compiledBaseUrl
+        : (savedUrl ?? _compiledBaseUrl);
+    _dio.options.baseUrl = effectiveBaseUrl;
+    debugPrint(
+      'BackendApiService: resetLocalAuthState, baseUrl=$effectiveBaseUrl',
+    );
   }
 
   void _onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -89,9 +125,10 @@ class BackendApiService {
 
   /// Anonymous device login. Creates user on first call.
   Future<Map<String, dynamic>> deviceLogin() async {
-    final response = await _dio.post('/auth/device', data: {
-      if (_deviceId != null) 'deviceId': _deviceId,
-    });
+    final response = await _dio.post(
+      '/auth/device',
+      data: {if (_deviceId != null) 'deviceId': _deviceId},
+    );
     final data = response.data as Map<String, dynamic>;
 
     _accessToken = data['accessToken'] as String;
@@ -112,11 +149,13 @@ class BackendApiService {
     final completer = Completer<bool>();
     _refreshCompleter = completer;
     try {
-      final response = await Dio(BaseOptions(
-        baseUrl: _dio.options.baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 30),
-      )).post('/auth/refresh', data: {'refreshToken': _refreshToken});
+      final response = await Dio(
+        BaseOptions(
+          baseUrl: _dio.options.baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      ).post('/auth/refresh', data: {'refreshToken': _refreshToken});
       _accessToken = (response.data as Map)['accessToken'] as String;
       await _saveTokens();
       if (!completer.isCompleted) completer.complete(true);
@@ -186,16 +225,17 @@ class BackendApiService {
     Duration connectTimeout = const Duration(seconds: 15),
     Duration receiveTimeout = const Duration(seconds: 60),
   }) {
-    final dio = Dio(BaseOptions(
-      baseUrl: '${_dio.options.baseUrl}/api/ai/',
-      headers: {'Content-Type': 'application/json'},
-      connectTimeout: connectTimeout,
-      receiveTimeout: receiveTimeout,
-    ));
-    dio.interceptors.add(InterceptorsWrapper(
-      onRequest: _onRequest,
-      onError: _onError,
-    ));
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: '${_dio.options.baseUrl}/api/ai/',
+        headers: {'Content-Type': 'application/json'},
+        connectTimeout: connectTimeout,
+        receiveTimeout: receiveTimeout,
+      ),
+    );
+    dio.interceptors.add(
+      InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
+    );
     return dio;
   }
 
@@ -204,14 +244,9 @@ class BackendApiService {
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) =>
-      _dio.get<T>(path, queryParameters: queryParameters);
+  }) => _dio.get<T>(path, queryParameters: queryParameters);
 
-  Future<Response<T>> post<T>(
-    String path, {
-    dynamic data,
-    Options? options,
-  }) =>
+  Future<Response<T>> post<T>(String path, {dynamic data, Options? options}) =>
       _dio.post<T>(path, data: data, options: options);
 
   Future<Response<T>> put<T>(String path, {dynamic data}) =>
@@ -223,12 +258,11 @@ class BackendApiService {
   Future<Response<ResponseBody>> postStream(
     String path, {
     required Map<String, dynamic> data,
-  }) =>
-      _dio.post<ResponseBody>(
-        path,
-        data: data,
-        options: Options(responseType: ResponseType.stream),
-      );
+  }) => _dio.post<ResponseBody>(
+    path,
+    data: data,
+    options: Options(responseType: ResponseType.stream),
+  );
 
   // ── Convenience API methods ────────────────────────────────
 
@@ -238,7 +272,8 @@ class BackendApiService {
   }
 
   Future<Map<String, dynamic>> updateProfile(
-      Map<String, dynamic> fields) async {
+    Map<String, dynamic> fields,
+  ) async {
     final r = await put('/api/profile', data: fields);
     return r.data as Map<String, dynamic>;
   }
@@ -249,12 +284,15 @@ class BackendApiService {
     String description = '喝水',
     DateTime? loggedAt,
   }) async {
-    final r = await post('/api/drink-logs', data: {
-      'ml': ml,
-      'icon': icon,
-      'description': description,
-      if (loggedAt != null) 'loggedAt': loggedAt.toUtc().toIso8601String(),
-    });
+    final r = await post(
+      '/api/drink-logs',
+      data: {
+        'ml': ml,
+        'icon': icon,
+        'description': description,
+        if (loggedAt != null) 'loggedAt': loggedAt.toUtc().toIso8601String(),
+      },
+    );
     return r.data as Map<String, dynamic>;
   }
 
@@ -266,18 +304,19 @@ class BackendApiService {
     int? limit,
   }) async {
     final queryParams = <String, dynamic>{
-      if (date != null) 'date': date,
-      if (startDate != null) 'startDate': startDate,
-      if (endDate != null) 'endDate': endDate,
-      if (tzOffset != null) 'tzOffset': tzOffset,
-      if (limit != null) 'limit': limit,
+      'date': ?date,
+      'startDate': ?startDate,
+      'endDate': ?endDate,
+      'tzOffset': ?tzOffset,
+      'limit': ?limit,
     };
     final r = await get('/api/drink-logs', queryParameters: queryParams);
     return r.data as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> bulkSyncDrinkLogs(
-      List<Map<String, dynamic>> logs) async {
+    List<Map<String, dynamic>> logs,
+  ) async {
     final r = await post('/api/drink-logs/bulk-sync', data: {'logs': logs});
     return r.data as Map<String, dynamic>;
   }
@@ -292,10 +331,10 @@ class BackendApiService {
     required String contactId,
     required String nickname,
   }) async {
-    final r = await post('/api/care/contacts', data: {
-      'contactId': contactId,
-      'nickname': nickname,
-    });
+    final r = await post(
+      '/api/care/contacts',
+      data: {'contactId': contactId, 'nickname': nickname},
+    );
     return r.data as Map<String, dynamic>;
   }
 
@@ -315,5 +354,10 @@ class BackendApiService {
       queryParameters: {'code': code.trim().toUpperCase()},
     );
     return r.data as Map<String, dynamic>;
+  }
+
+  /// Deletes a memory fact on the server. Returns 204 with no body on success.
+  Future<void> deleteMemoryFact(String id) async {
+    await delete('/api/memory/$id');
   }
 }

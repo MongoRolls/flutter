@@ -85,7 +85,7 @@ class AiService {
         final content = m['content'];
         final toolCalls = m['tool_calls'];
         final toolCallId = m['tool_call_id'];
-        debugPrint('  [$role] content=${content == null ? 'null' : '"${content.toString().length > 60 ? content.toString().substring(0, 60) + "..." : content}"'}${toolCalls != null ? ' tool_calls=${(toolCalls as List).length}' : ''}${toolCallId != null ? ' tool_call_id=$toolCallId' : ''}');
+        debugPrint('  [$role] content=${content == null ? 'null' : '"${content.toString().length > 60 ? '${content.toString().substring(0, 60)}...' : content}"'}${toolCalls != null ? ' tool_calls=${(toolCalls as List).length}' : ''}${toolCallId != null ? ' tool_call_id=$toolCallId' : ''}');
       }
 
       final response = await _dio.post<ResponseBody>(
@@ -213,6 +213,10 @@ class AiService {
       } else if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
         msg = '网络超时，请检查网络连接';
+      } else if (e.message?.contains('Connection refused') == true) {
+        msg = '无法连接后端（Connection refused）。'
+            '若要用线上 API：请使用 flutter run --dart-define=BACKEND_URL=https://你的域名；'
+            '若用本机后端：请先启动 backend 并监听 3000 端口。';
       } else {
         msg = '网络错误：${e.message ?? '未知错误'}';
       }
