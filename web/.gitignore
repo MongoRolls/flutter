@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -42,3 +43,7 @@ next-env.d.ts
 
 # local tooling
 .claude/
+
+# 发布用安装包（由构建产物复制，不纳入版本库）
+public/*.apk
+public/*.zip
