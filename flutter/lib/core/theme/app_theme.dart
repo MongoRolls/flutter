@@ -184,9 +184,12 @@ class AppTheme {
         elevation: 0,
         shadowColor: AppColors.shadow,
       ),
+      // 实色底：避免 [AlertDialog] 继承透明后底层页面（按钮、列表）透出叠层。
+      // [AppDialogScaffold] 仍对 [Dialog] 使用 `backgroundColor: Colors.transparent` 自绘卡片。
       dialogTheme: DialogThemeData(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        backgroundColor: AppColors.bgCard,
+        elevation: 8,
+        shadowColor: AppColors.shadow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.x2l),
         ),

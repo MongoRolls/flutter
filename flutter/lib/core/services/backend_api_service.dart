@@ -338,6 +338,11 @@ class BackendApiService {
     return r.data as Map<String, dynamic>;
   }
 
+  /// Deletes a care contact row by server id (`CareContact.id`, not peer `userId`).
+  Future<void> deleteCareContact(String careContactRowId) async {
+    await delete('/api/care/contacts/$careContactRowId');
+  }
+
   Future<Map<String, dynamic>> getFriendCode() async {
     final r = await get('/api/care/friend-code');
     return r.data as Map<String, dynamic>;
@@ -359,5 +364,63 @@ class BackendApiService {
   /// Deletes a memory fact on the server. Returns 204 with no body on success.
   Future<void> deleteMemoryFact(String id) async {
     await delete('/api/memory/$id');
+  }
+
+  // ── Team challenges ───────────────────────────────────────
+
+  Future<Map<String, dynamic>> getChallengesMine({
+    String? localDate,
+    int? tzOffset,
+  }) async {
+    final r = await get(
+      '/api/challenges/mine',
+      queryParameters: {
+        'localDate': ?localDate,
+        'tzOffset': ?tzOffset,
+      },
+    );
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createChallenge({
+    required String title,
+    String goalType = 'individual_daily',
+    required int goalValue,
+    required String periodStartIso,
+    required String periodEndIso,
+  }) async {
+    final r = await post(
+      '/api/challenges',
+      data: {
+        'title': title,
+        'goalType': goalType,
+        'goalValue': goalValue,
+        'periodStart': periodStartIso,
+        'periodEnd': periodEndIso,
+      },
+    );
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> joinChallenge(String inviteCode) async {
+    final r = await post(
+      '/api/challenges/join',
+      data: {'inviteCode': inviteCode.trim().toUpperCase()},
+    );
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<void> leaveChallenge(String challengeId) async {
+    await post('/api/challenges/$challengeId/leave');
+  }
+
+  Future<Map<String, dynamic>> ackChallengeResult(String challengeId) async {
+    final r = await post('/api/challenges/$challengeId/result-ack');
+    return r.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getChallengeDetail(String challengeId) async {
+    final r = await get('/api/challenges/$challengeId');
+    return r.data as Map<String, dynamic>;
   }
 }

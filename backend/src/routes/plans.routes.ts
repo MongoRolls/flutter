@@ -10,7 +10,7 @@ const router = Router();
 
 const upsertPlanSchema = z.object({
   body: z.object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '\u65E5\u671F\u683C\u5F0F\u9700\u4E3A YYYY-MM-DD'),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式需为 YYYY-MM-DD'),
     planJson: z.record(z.unknown()),
   }),
 });
@@ -22,7 +22,9 @@ router.get('/', auth, async (req, res, next) => {
     const date = req.query.date as string;
 
     if (!date) {
-      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: '\u7F3A\u5C11 date \u53C2\u6570' } });
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: '缺少 date 参数' },
+      });
       return;
     }
 

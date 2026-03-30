@@ -9,16 +9,16 @@ export const redis = new Redis(env.REDIS_URL, {
 });
 
 redis.on('error', (err) => {
-  logger.error({ err }, 'Redis \u8FDE\u63A5\u9519\u8BEF');
+  logger.error({ err }, 'Redis 连接错误');
 });
 
 // 启动时显式连接，尽早发现 Redis 不可用
 export async function connectRedis(): Promise<void> {
   try {
     await redis.connect();
-    logger.info('Redis \u8FDE\u63A5\u6210\u529F');
+    logger.info('Redis 连接成功');
   } catch (err) {
-    logger.error({ err }, 'Redis \u521D\u59CB\u8FDE\u63A5\u5931\u8D25');
+    logger.error({ err }, 'Redis 初始连接失败');
     throw err;
   }
 }

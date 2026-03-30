@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 
-/// 连续打卡展示（火焰 + ��周日历）
+/// 连续打卡展示（火焰 + 周日历）
 class StreakDisplay extends StatefulWidget {
   final int streakDays;
   final int todayMl;

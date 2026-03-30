@@ -11,28 +11,30 @@ async function main(): Promise<void> {
   await connectRedis();
 
   const server = app.listen(env.PORT, () => {
-    logger.info(`KeLeME \u540E\u7AEF\u670D\u52A1\u5DF2\u542F\u52A8\uFF0C\u7AEF\u53E3 ${env.PORT}\uFF0C\u73AF\u5883 ${env.NODE_ENV}`);
+    logger.info(
+      `KeLeME 后端服务已启动，端口 ${env.PORT}，环境 ${env.NODE_ENV}`,
+    );
   });
 
-  // ── \u4F18\u96C5\u5173\u95ED ──────────────────────────────────────────────────────────────────
+  // ── 优雅关闭 ──────────────────────────────────────────────────────────────────
   async function shutdown(signal: string): Promise<void> {
-    logger.info(`\u6536\u5230 ${signal} \u4FE1\u53F7\uFF0C\u6B63\u5728\u4F18\u96C5\u5173\u95ED...`);
+    logger.info(`收到 ${signal} 信号，正在优雅关闭...`);
 
     server.close(async () => {
-      logger.info('HTTP \u670D\u52A1\u5668\u5DF2\u5173\u95ED');
+      logger.info('HTTP 服务器已关闭');
 
       await prisma.$disconnect();
-      logger.info('Prisma \u8FDE\u63A5\u5DF2\u65AD\u5F00');
+      logger.info('Prisma 连接已断开');
 
       redis.disconnect();
-      logger.info('Redis \u8FDE\u63A5\u5DF2\u65AD\u5F00');
+      logger.info('Redis 连接已断开');
 
       process.exit(0);
     });
 
-    // \u8D85\u65F6\u5F3A\u5236\u9000\u51FA
+    // 超时强制退出
     setTimeout(() => {
-      logger.error('\u4F18\u96C5\u5173\u95ED\u8D85\u65F6\uFF0C\u5F3A\u5236\u9000\u51FA');
+      logger.error('优雅关闭超时，强制退出');
       process.exit(1);
     }, 10_000);
   }
@@ -42,6 +44,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  logger.fatal({ err }, '\u670D\u52A1\u542F\u52A8\u5931\u8D25');
+  logger.fatal({ err }, '服务启动失败');
   process.exit(1);
 });

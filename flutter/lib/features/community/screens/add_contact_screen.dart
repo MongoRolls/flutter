@@ -8,7 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/backend_api_error_message.dart';
 import '../models/care_contact.dart';
 
-/// 添加关怀联系人页面（结构化表单：好友码、关系、备注、头像）
+/// 添加队友页面（好友短码、关系、备注、头像）
 class AddContactScreen extends StatefulWidget {
   const AddContactScreen({super.key});
 
@@ -54,11 +54,16 @@ class _AddContactScreenState extends State<AddContactScreen> {
       final lookup = await backend.lookupFriendCode(code);
       final contactId = lookup['userId'] as String;
       final nickname = _resolveNickname(remark, lookup);
-      await backend.createCareContact(contactId: contactId, nickname: nickname);
+      final resp = await backend.createCareContact(
+        contactId: contactId,
+        nickname: nickname,
+      );
+      final rowId = resp['id'] as String?;
 
       final contact = CareContact(
         id: contactId,
         name: nickname,
+        serverRowId: rowId,
         relationship: _relationship,
         avatarEmoji: _avatarEmoji,
       );
@@ -83,7 +88,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('添加关怀的人'),
+        title: const Text('添加队友'),
         centerTitle: true,
         actions: [
           TextButton(

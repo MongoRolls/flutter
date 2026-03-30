@@ -74,7 +74,8 @@ class DebugService {
         status: TestStatus.success,
         label: '触发即时通知',
         message: '已发送测试通知 ($style)',
-        detail: '请查看系统通知栏',
+        detail:
+            '请查看系统通知栏。使用智能手表时，需先在系统或穿戴 App 中允许通知同步到手表后，表端才会显示。',
         timestamp: DateTime.now(),
       );
     } catch (e, st) {

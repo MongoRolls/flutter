@@ -146,7 +146,7 @@ export async function deleteContact(userId: string, recordId: string): Promise<v
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
-      throw new NotFoundError('\u8054\u7CFB\u4EBA');
+      throw new NotFoundError('联系人');
     }
     throw e;
   }

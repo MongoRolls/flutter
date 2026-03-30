@@ -116,11 +116,21 @@ export function HeroSection() {
                     <span className="text-lg text-kelem-text-secondary"> ml</span>
                   </p>
                 </div>
-                <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-border/80 bg-muted/30 dark:border-white/10 dark:bg-white/5">
-                  <p className="px-6 text-center text-sm text-kelem-text-hint">
-                    手机界面预览占位
-                    <br />
-                    <span className="text-xs">后续替换为真实截图</span>
+                <div className="flex flex-1 flex-col justify-center rounded-2xl border border-dashed border-border/80 bg-muted/30 px-3 py-5 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-center text-xs font-medium text-kelem-text-secondary">
+                    本周饮水趋势
+                  </p>
+                  <div className="mt-3 flex h-16 items-end justify-center gap-1.5">
+                    {[42, 58, 36, 72, 48, 66, 52].map((h, i) => (
+                      <div
+                        key={i}
+                        className="w-2 rounded-full bg-gradient-to-t from-kelem-sky-deep/55 to-kelem-green/65"
+                        style={{ height: `${h}%` }}
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-2 text-center text-[11px] leading-snug text-kelem-text-hint">
+                    示意预览 · 完整数据在 App 内
                   </p>
                 </div>
               </div>

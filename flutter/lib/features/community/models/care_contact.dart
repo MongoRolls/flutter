@@ -1,6 +1,10 @@
 class CareContact {
+  /// 对方用户 id（与后端 `contactId` 一致）
   final String id;
   final String name;
+
+  /// 后端 `CareContact` 行 id，用于 `DELETE /api/care/contacts/:id`
+  final String? serverRowId;
 
   /// 关系类型：'family' | 'friend'
   final String relationship;
@@ -17,6 +21,7 @@ class CareContact {
     required this.name,
     required this.relationship,
     required this.avatarEmoji,
+    this.serverRowId,
     this.mockDailyGoalMl = 2000,
     this.mockTodayMl = 0,
   });
@@ -35,6 +40,7 @@ class CareContact {
   Map<String, dynamic> toMap() => {
     'id': id,
     'name': name,
+    if (serverRowId != null) 'serverRowId': serverRowId,
     'relationship': relationship,
     'avatarEmoji': avatarEmoji,
     'mockDailyGoalMl': mockDailyGoalMl,
@@ -44,6 +50,7 @@ class CareContact {
   factory CareContact.fromMap(Map<String, dynamic> map) => CareContact(
     id: map['id'] as String,
     name: map['name'] as String,
+    serverRowId: map['serverRowId'] as String?,
     relationship: _normalizeRelationship(map['relationship'] as String?),
     avatarEmoji: map['avatarEmoji'] as String,
     mockDailyGoalMl: map['mockDailyGoalMl'] as int? ?? 2000,

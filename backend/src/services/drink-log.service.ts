@@ -74,7 +74,7 @@ export async function createLog(
       userId,
       ml: data.ml,
       icon: data.icon ?? '\u{1F4A7}',
-      description: data.description ?? '\u559D\u6C34',
+      description: data.description ?? '喝水',
       loggedAt: data.loggedAt ? new Date(data.loggedAt) : new Date(),
       syncedAt: new Date(),
     },
@@ -116,7 +116,7 @@ export async function bulkSync(
           userId,
           ml: l.ml,
           icon: l.icon ?? '\u{1F4A7}',
-          description: l.description ?? '\u559D\u6C34',
+          description: l.description ?? '喝水',
           loggedAt: new Date(l.loggedAt),
           syncedAt: now,
         },
@@ -139,7 +139,7 @@ export async function deleteLog(userId: string, logId: string): Promise<void> {
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
-      throw new NotFoundError('\u8BB0\u5F55');
+      throw new NotFoundError('记录');
     }
     throw e;
   }

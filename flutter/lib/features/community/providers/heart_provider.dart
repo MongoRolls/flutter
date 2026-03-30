@@ -5,20 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/services/backend_api_service.dart';
-import '../../../core/services/notification_service.dart';
 import '../models/care_contact.dart';
-import '../models/care_record.dart';
 
-/// 心连心模块的状态管理
+/// 队友列表：与后端 `CareContact` 同步（好友短码添加）
 class HeartProvider extends ChangeNotifier {
   List<CareContact> _contacts = [];
-  List<CareRecord> _records = [];
 
   List<CareContact> get contacts => List.unmodifiable(_contacts);
-  List<CareRecord> get records => List.unmodifiable(_records);
-
-  /// 是否已发送过关怀
-  bool get hasSentCare => _records.any((r) => r.fromLabel == '你');
 
   /// 初始化加载（无预置 mock；首次为空列表）
   Future<void> load() async {
@@ -41,7 +34,7 @@ class HeartProvider extends ChangeNotifier {
       if (backend.isAuthenticated) {
         try {
           final list = await backend.getCareContacts();
-          _contacts = list
+          final remoteContacts = list
               .map((e) {
                 final contact = e['contact'] as Map<String, dynamic>?;
                 final contactId =
@@ -54,9 +47,11 @@ class HeartProvider extends ChangeNotifier {
                     (contact?['nickname'] as String?) ??
                     '水友';
                 final local = localById[contactId];
+                final rowId = e['id'] as String?;
                 return CareContact(
                   id: contactId,
                   name: remoteName,
+                  serverRowId: rowId ?? local?.serverRowId,
                   relationship: local?.relationship ?? 'friend',
                   avatarEmoji: local?.avatarEmoji ?? '😊',
                   mockDailyGoalMl: local?.mockDailyGoalMl ?? 2000,
@@ -65,6 +60,7 @@ class HeartProvider extends ChangeNotifier {
               })
               .whereType<CareContact>()
               .toList();
+          _contacts = remoteContacts;
           await _saveContacts(prefs);
           loadedFromRemote = true;
         } catch (e) {
@@ -77,73 +73,55 @@ class HeartProvider extends ChangeNotifier {
         _contacts = List.of(localContacts);
       }
 
-      final recordsJson = prefs.getString('care_records');
-      if (recordsJson != null) {
-        final list = jsonDecode(recordsJson) as List;
-        _records = list.map((e) => CareRecord.fromMap(e)).toList();
-      } else {
-        _records = [];
-      }
-
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading heart data: $e');
     }
   }
 
-  /// 添加联系人
+  /// 添加联系人（已登录时同步创建后端记录）
   Future<void> addContact(CareContact contact) async {
-    final idx = _contacts.indexWhere((c) => c.id == contact.id);
-    if (idx >= 0) {
-      _contacts[idx] = contact;
-    } else {
-      _contacts.add(contact);
-    }
-    final prefs = await SharedPreferences.getInstance();
-    await _saveContacts(prefs);
-    notifyListeners();
-  }
-
-  /// 删除联系人
-  Future<void> removeContact(String id) async {
-    _contacts.removeWhere((c) => c.id == id);
-    final prefs = await SharedPreferences.getInstance();
-    await _saveContacts(prefs);
-    notifyListeners();
-  }
-
-  /// 发送关怀（触发本地通知 + 存 CareRecord）
-  Future<void> sendCare({
-    required String message,
-    required List<CareContact> recipients,
-  }) async {
-    final now = DateTime.now();
-
-    for (final contact in recipients) {
-      final record = CareRecord(
-        id: 'care_${now.millisecondsSinceEpoch}_${contact.id}',
-        fromLabel: '你',
-        toLabel: contact.name,
-        message: message,
-        sentAt: now,
+    final backend = BackendApiService.instance;
+    var toStore = contact;
+    if (backend.isAuthenticated) {
+      final r = await backend.createCareContact(
+        contactId: contact.id,
+        nickname: contact.name,
       );
-      _records.insert(0, record);
-
-      try {
-        await NotificationService.instance.showCareNotification(
-          contactName: contact.name,
-          message: message,
-        );
-      } catch (e) {
-        debugPrint('Failed to send care notification: $e');
-      }
+      final rowId = r['id'] as String?;
+      toStore = CareContact(
+        id: contact.id,
+        name: contact.name,
+        serverRowId: rowId ?? contact.serverRowId,
+        relationship: contact.relationship,
+        avatarEmoji: contact.avatarEmoji,
+        mockDailyGoalMl: contact.mockDailyGoalMl,
+        mockTodayMl: contact.mockTodayMl,
+      );
     }
-
-    final cutoff = now.subtract(const Duration(days: 30));
-    _records.removeWhere((r) => r.sentAt.isBefore(cutoff));
-
+    final idx = _contacts.indexWhere((c) => c.id == toStore.id);
+    if (idx >= 0) {
+      _contacts[idx] = toStore;
+    } else {
+      _contacts.add(toStore);
+    }
     final prefs = await SharedPreferences.getInstance();
-    await _saveRecords(prefs);
+    await _saveContacts(prefs);
+    notifyListeners();
+  }
+
+  /// 删除队友（已登录且存在 [CareContact.serverRowId] 时同步调用后端删除）
+  Future<void> removeContact(String id) async {
+    final idx = _contacts.indexWhere((c) => c.id == id);
+    if (idx < 0) return;
+    final removed = _contacts[idx];
+    final backend = BackendApiService.instance;
+    if (backend.isAuthenticated && removed.serverRowId != null) {
+      await backend.deleteCareContact(removed.serverRowId!);
+    }
+    _contacts.removeAt(idx);
+    final prefs = await SharedPreferences.getInstance();
+    await _saveContacts(prefs);
     notifyListeners();
   }
 
@@ -151,13 +129,6 @@ class HeartProvider extends ChangeNotifier {
     await prefs.setString(
       'care_contacts',
       jsonEncode(_contacts.map((e) => e.toMap()).toList()),
-    );
-  }
-
-  Future<void> _saveRecords(SharedPreferences prefs) async {
-    await prefs.setString(
-      'care_records',
-      jsonEncode(_records.map((e) => e.toMap()).toList()),
     );
   }
 }

@@ -6,6 +6,10 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+/// 本地通知（喝水 / 自定义 / 心连心等）。
+///
+/// Android 上各渠道均使用 [Importance.high]，便于系统向已配对的智能手表同步
+/// 镜像通知（仍取决于系统与穿戴 App 设置）。请勿改为 `low`/`min`，以免表端被折叠或不同步。
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -283,36 +287,5 @@ class NotificationService {
 
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
-  }
-
-  /// 发送心连心关怀通知
-  Future<void> showCareNotification({
-    required String contactName,
-    required String message,
-  }) async {
-    await _plugin.show(
-      id: 8000 + DateTime.now().millisecond,
-      title: '渴了么 · 心连心',
-      body: '已向$contactName发送关怀：$message',
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          'keleme_care',
-          '心连心关怀',
-          channelDescription: '心连心喝水关怀通知',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-        macOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-    );
   }
 }

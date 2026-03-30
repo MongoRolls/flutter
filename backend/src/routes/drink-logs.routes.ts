@@ -12,7 +12,7 @@ const createLogSchema = z.object({
   body: z.object({
     ml: z.number().int().min(1).max(5000),
     icon: z.string().default('\u{1F4A7}'),
-    description: z.string().default('\u559D\u6C34'),
+    description: z.string().default('喝水'),
     loggedAt: z.string().datetime().optional(),
   }),
 });
@@ -23,7 +23,7 @@ const bulkSyncSchema = z.object({
       localId: z.string(),
       ml: z.number().int().min(1).max(5000),
       icon: z.string().default('\u{1F4A7}'),
-      description: z.string().default('\u559D\u6C34'),
+      description: z.string().default('喝水'),
       loggedAt: z.string().datetime(),
     })).max(500),
   }),

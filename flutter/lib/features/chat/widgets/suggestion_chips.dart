@@ -8,7 +8,6 @@ class SuggestionChips extends StatelessWidget {
   static const defaultSuggestions = [
     '今天该喝多少水？',
     '帮我制定喝水计划',
-    '喝咖啡算喝水吗？',
     '我的饮水习惯怎么样？',
   ];
 

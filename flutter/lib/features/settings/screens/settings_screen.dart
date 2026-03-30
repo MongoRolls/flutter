@@ -301,6 +301,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             (v) => setState(() => _notificationsEnabled = v),
             showDivider: false,
           ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.watch_outlined,
+                size: 14,
+                color: AppColors.textHint,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '智能手表：提醒由手机发出，经系统同步到手表显示；无需单独安装手表版。若表上无提醒，请在系统或穿戴 App 中开启对本应用的通知，并打开「同步到手表」。',
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.35,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

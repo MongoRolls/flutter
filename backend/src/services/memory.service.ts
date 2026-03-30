@@ -47,7 +47,7 @@ export async function deleteFact(userId: string, factId: string): Promise<void> 
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
-      throw new NotFoundError('\u8BB0\u5FC6');
+      throw new NotFoundError('记忆');
     }
     throw e;
   }

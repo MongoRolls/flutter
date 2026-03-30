@@ -24,6 +24,8 @@ model User {
   plans        TodayPlan[]
   careContacts CareContact[]   @relation("owner")
   caredBy      CareContact[]   @relation("contact")
+  challenges   ChallengeMember[]
+  createdChallenges Challenge[] @relation("challengeCreator")
 }
 
 model UserProfile {
@@ -103,4 +105,40 @@ model CareContact {
   @@unique([ownerId, contactId])
   @@index([ownerId])
   @@index([contactId])
+}
+
+model Challenge {
+  id          String   @id @default(cuid())
+  title       String
+  goalType    String   @default("individual_daily")
+  goalValue   Int
+  periodStart DateTime
+  periodEnd   DateTime
+  status      String   @default("upcoming")
+  inviteCode  String   @unique
+  creatorId   String
+  creator     User     @relation("challengeCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members ChallengeMember[]
+
+  @@index([status])
+  @@index([creatorId])
+}
+
+model ChallengeMember {
+  id                   String    @id @default(cuid())
+  challengeId          String
+  challenge            Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                 String    @default("member")
+  joinedAt             DateTime  @default(now())
+  leftAt               DateTime?
+  resultAcknowledgedAt DateTime?
+
+  @@unique([challengeId, userId])
+  @@index([userId])
+  @@index([challengeId, leftAt])
 }

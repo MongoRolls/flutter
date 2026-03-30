@@ -16,6 +16,7 @@ import memoryRouter from './routes/memory.routes.js';
 import sessionsRouter from './routes/sessions.routes.js';
 import aiRouter from './routes/ai.routes.js';
 import careRouter from './routes/care.routes.js';
+import challengesRouter from './routes/challenges.routes.js';
 
 export const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/memory', memoryRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/care', careRouter);
+app.use('/api/challenges', challengesRouter);
 
 // ── 全局错误处理（必须在所有路由之后）────────────────────────────────────────
 app.use(errorHandler);
