@@ -22,6 +22,7 @@ flutter run -d macos                     # Run on macOS (recommended for dev)
 flutter run -d chrome                    # Run on web
 flutter build apk --split-per-abi        # Production Android APK
 flutter build web                        # Production web build
+./scripts/sync_release_to_web_public.sh    # Release 产物（macOS zip / arm64 APK / 可选 IPA）→ ../web/public，供官网直链
 flutter clean && flutter pub get         # Reset build cache if issues arise
 ```
 

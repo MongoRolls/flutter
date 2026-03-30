@@ -81,6 +81,4 @@ dist/
 next-env.d.ts
 .vercel/
 
-# 安装包体积大，勿提交；部署时由 CI 上传或指向 Release/CDN
-web/public/*.apk
-web/public/*.zip
+# MVP：安装包可提交在 web/public；若需改回仅 CDN，再忽略 *.apk / *.zip / *.ipa

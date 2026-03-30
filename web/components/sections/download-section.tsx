@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Apple, Download, MonitorSmartphone, Smartphone } from "lucide-react";
+import { Apple, Download, MonitorSmartphone, Phone, Smartphone } from "lucide-react";
 import Link from "next/link";
 
 import { GlassCard } from "@/components/glass-card";
@@ -12,9 +12,11 @@ import { cn } from "@/lib/utils";
 type DownloadSectionProps = {
   apkUrl: string;
   macosUrl: string;
+  /** 未构建 IPA 时不传，页面显示「即将推出」 */
+  iosUrl?: string;
 };
 
-export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
+export function DownloadSection({ apkUrl, macosUrl, iosUrl }: DownloadSectionProps) {
   return (
     <SectionReveal
       id="download"
@@ -26,7 +28,7 @@ export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
             下载与体验
           </h2>
           <p className="mt-2 text-base text-kelem-text-secondary sm:mt-3 sm:text-lg">
-            当前提供 Android APK 与 macOS 安装包；更多平台陆续到来。
+            提供 Android（arm64 APK）与 macOS zip；iOS 在 IPA 就绪后开放下载。
           </p>
         </div>
 
@@ -62,24 +64,43 @@ export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
               <Apple className="size-5" aria-hidden />
               macOS（zip）
             </Link>
+
+            {iosUrl ? (
+              <Link
+                href={iosUrl}
+                download
+                aria-label="下载 iOS IPA 安装包"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "lg" }),
+                  "h-12 w-full gap-2.5 rounded-[14px]"
+                )}
+              >
+                <Phone className="size-5" aria-hidden />
+                iPhone（IPA）
+              </Link>
+            ) : (
+              <Button
+                type="button"
+                disabled
+                variant="outline"
+                size="lg"
+                className="h-12 w-full rounded-[14px]"
+                aria-disabled="true"
+                title="在仓库 web/public 放入 ke-le-me-ios.ipa 后显示下载（flutter build ipa）"
+              >
+                <Phone className="size-5" aria-hidden />
+                iPhone（IPA 待上传）
+              </Button>
+            )}
           </GlassCard>
 
-          {/* 即将推出的平台——紧凑小行 */}
-          <div className="flex gap-3">
-            <div className="flex flex-1 items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-              <div className="flex items-center gap-2">
-                <Apple className="size-4 text-kelem-text-hint" aria-hidden />
-                <span className="text-sm font-medium text-kelem-text-secondary">iOS</span>
-              </div>
-              <span className="text-xs text-kelem-text-hint">即将推出</span>
+          {/* 即将推出的平台 */}
+          <div className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+            <div className="flex items-center gap-2">
+              <MonitorSmartphone className="size-4 text-kelem-text-hint" aria-hidden />
+              <span className="text-sm font-medium text-kelem-text-secondary">PC</span>
             </div>
-            <div className="flex flex-1 items-center justify-between rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-              <div className="flex items-center gap-2">
-                <MonitorSmartphone className="size-4 text-kelem-text-hint" aria-hidden />
-                <span className="text-sm font-medium text-kelem-text-secondary">PC</span>
-              </div>
-              <span className="text-xs text-kelem-text-hint">即将推出</span>
-            </div>
+            <span className="text-xs text-kelem-text-hint">即将推出</span>
           </div>
         </div>
 
@@ -87,7 +108,7 @@ export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
         <div className="hidden md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-4">
           <PlatformCard
             title="Android"
-            subtitle="APK 安装包"
+            subtitle="arm64 APK（split 产物）"
             icon={Smartphone}
             iconClassName="text-kelem-green"
             available
@@ -103,10 +124,16 @@ export function DownloadSection({ apkUrl, macosUrl }: DownloadSectionProps) {
           />
           <PlatformCard
             title="iOS"
-            subtitle="App Store"
-            icon={Apple}
-            iconClassName="text-kelem-text-hint"
-            comingSoon
+            subtitle={
+              iosUrl
+                ? "IPA（安装后需在设置中信任开发者）"
+                : "构建 IPA 后放入 public/ke-le-me-ios.ipa"
+            }
+            icon={Phone}
+            iconClassName={iosUrl ? "text-kelem-sky" : "text-kelem-text-hint"}
+            comingSoon={!iosUrl}
+            available={!!iosUrl}
+            href={iosUrl}
           />
           <PlatformCard
             title="PC"

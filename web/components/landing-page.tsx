@@ -10,9 +10,11 @@ import { SiteHeader } from "@/components/site-header";
 export type LandingPageProps = {
   apkUrl: string;
   macosUrl: string;
+  /** 仅当 `public/ke-le-me-ios.ipa` 存在时由服务端传入 */
+  iosUrl?: string;
 };
 
-export function LandingPage({ apkUrl, macosUrl }: LandingPageProps) {
+export function LandingPage({ apkUrl, macosUrl, iosUrl }: LandingPageProps) {
   return (
     <div className="flex min-h-full flex-col">
       <SiteHeader />
@@ -21,7 +23,7 @@ export function LandingPage({ apkUrl, macosUrl }: LandingPageProps) {
         <HeroSection />
         <FeaturesSection />
         <WorkflowSection />
-        <DownloadSection apkUrl={apkUrl} macosUrl={macosUrl} />
+        <DownloadSection apkUrl={apkUrl} macosUrl={macosUrl} iosUrl={iosUrl} />
       </main>
       <FooterSection />
     </div>

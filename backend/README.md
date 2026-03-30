@@ -585,7 +585,7 @@ podman-compose down -v
 
 #### Podman Compose 生产全栈部署
 
-**VPS 推荐（免整仓 `git clone`）**：CI 将 API 镜像推送到 **ghcr.io**（见仓库 `.github/workflows/backend-docker.yml`），服务器只保留 `backend/docker-compose.prod.yml`、`.env` 与 `scripts/deploy-podman.sh`（可用 `scp` 同步），在 `.env` 中设置：
+**VPS 推荐（免整仓 `git clone`）**：将 API 镜像推送到 **ghcr.io**（本地 `podman build` / `podman push` 或自建 CI），服务器只保留 `backend/docker-compose.prod.yml`、`.env` 与 `scripts/deploy-podman.sh`（可用 `scp` 同步），在 `.env` 中设置：
 
 - `KELEME_BACKEND_IMAGE=ghcr.io/<owner>/<repo>/keleme-backend:latest`
 - `POSTGRES_PASSWORD`（与 compose 内一致）
