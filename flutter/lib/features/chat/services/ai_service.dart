@@ -215,8 +215,8 @@ class AiService {
         msg = '网络超时，请检查网络连接';
       } else if (e.message?.contains('Connection refused') == true) {
         msg = '无法连接后端（Connection refused）。'
-            '若要用线上 API：请使用 flutter run --dart-define=BACKEND_URL=https://你的域名；'
-            '若用本机后端：请先启动 backend 并监听 3000 端口。';
+            '默认已指向 https://api.mongorolls.cn；若联调本机请使用 '
+            '`flutter run --dart-define=BACKEND_URL=http://localhost:3000` 并先启动 backend。';
       } else {
         msg = '网络错误：${e.message ?? '未知错误'}';
       }

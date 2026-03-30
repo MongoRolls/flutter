@@ -4,6 +4,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// build_runner's analyzer does not parse null-aware map entries (`'k': ?v`);
+// use `if (x != null) 'k': x` here instead.
+// ignore_for_file: use_null_aware_elements
+
 /// Singleton HTTP client for KeLeME backend.
 ///
 /// Handles device auth, JWT token persistence, and automatic refresh.
@@ -16,12 +20,14 @@ class BackendApiService {
   static const _refreshTokenKey = 'backend_refresh_token';
   static const _deviceIdKey = 'backend_device_id';
 
-  static const _defaultLocalBaseUrl = 'http://localhost:3000';
+  /// 默认生产 API（未传 `--dart-define=BACKEND_URL` 时使用）。
+  static const _defaultProductionBaseUrl = 'https://api.mongorolls.cn';
 
-  /// Compile-time API root (use `--dart-define=BACKEND_URL=https://api.example.com`).
+  /// Compile-time API root（覆盖 [_defaultProductionBaseUrl]；本地后端示例：
+  /// `--dart-define=BACKEND_URL=http://localhost:3000`）。
   static const _compiledBaseUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: _defaultLocalBaseUrl,
+    defaultValue: _defaultProductionBaseUrl,
   );
 
   late final Dio _dio;
@@ -43,8 +49,8 @@ class BackendApiService {
     final prefs = await SharedPreferences.getInstance();
     final savedUrl = prefs.getString(_baseUrlKey);
 
-    // 若编译时指定了非 localhost 的 BACKEND_URL，优先使用（避免本地 prefs 覆盖联调地址）。
-    final effectiveBaseUrl = _compiledBaseUrl != _defaultLocalBaseUrl
+    // 若编译期指定了非默认生产地址（如 localhost），仅用编译期值，避免 prefs 覆盖联调地址。
+    final effectiveBaseUrl = _compiledBaseUrl != _defaultProductionBaseUrl
         ? _compiledBaseUrl
         : (savedUrl ?? _compiledBaseUrl);
 
@@ -67,7 +73,7 @@ class BackendApiService {
 
     debugPrint(
       'BackendApiService: baseUrl=$effectiveBaseUrl '
-      '(${_compiledBaseUrl != _defaultLocalBaseUrl ? "dart-define" : (savedUrl != null ? "prefs" : "default localhost")})',
+      '(${_compiledBaseUrl != _defaultProductionBaseUrl ? "dart-define" : (savedUrl != null ? "prefs" : "default production")})',
     );
   }
 
@@ -84,7 +90,7 @@ class BackendApiService {
 
     final prefs = await SharedPreferences.getInstance();
     final savedUrl = prefs.getString(_baseUrlKey);
-    final effectiveBaseUrl = _compiledBaseUrl != _defaultLocalBaseUrl
+    final effectiveBaseUrl = _compiledBaseUrl != _defaultProductionBaseUrl
         ? _compiledBaseUrl
         : (savedUrl ?? _compiledBaseUrl);
     _dio.options.baseUrl = effectiveBaseUrl;
@@ -304,11 +310,11 @@ class BackendApiService {
     int? limit,
   }) async {
     final queryParams = <String, dynamic>{
-      'date': ?date,
-      'startDate': ?startDate,
-      'endDate': ?endDate,
-      'tzOffset': ?tzOffset,
-      'limit': ?limit,
+      if (date != null) 'date': date,
+      if (startDate != null) 'startDate': startDate,
+      if (endDate != null) 'endDate': endDate,
+      if (tzOffset != null) 'tzOffset': tzOffset,
+      if (limit != null) 'limit': limit,
     };
     final r = await get('/api/drink-logs', queryParameters: queryParams);
     return r.data as Map<String, dynamic>;
@@ -375,8 +381,8 @@ class BackendApiService {
     final r = await get(
       '/api/challenges/mine',
       queryParameters: {
-        'localDate': ?localDate,
-        'tzOffset': ?tzOffset,
+        if (localDate != null) 'localDate': localDate,
+        if (tzOffset != null) 'tzOffset': tzOffset,
       },
     );
     return r.data as Map<String, dynamic>;

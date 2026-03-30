@@ -30,6 +30,7 @@ jobs:
 
       - run: >
           flutter build apk --split-per-abi
+          --dart-define=BACKEND_URL=https://api.mongorolls.cn
           --dart-define=DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
 
       - uses: actions/upload-artifact@v4
@@ -52,7 +53,9 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build web
+      - run: >
+          flutter build web
+          --dart-define=BACKEND_URL=https://api.mongorolls.cn
 
       - uses: actions/upload-artifact@v4
         with:

@@ -25,7 +25,8 @@ flutter build ipa --release \
 IPA_STATUS=$?
 set -e
 if [[ $IPA_STATUS -eq 0 ]]; then
-  IPA="$(ls -1 "$ROOT/build/ios/ipa/"*.ipa 2>/dev/null | head -1)"
+  # 归档成功但导出失败时可能无 .ipa；pipefail 下空 glob 会令命令替换失败并触发 set -e
+  IPA="$(ls -1 "$ROOT/build/ios/ipa/"*.ipa 2>/dev/null | head -1)" || true
   if [[ -n "${IPA:-}" ]]; then
     cp "$IPA" "$WEB_PUBLIC/ke-le-me-ios.ipa"
     echo "    已复制: ke-le-me-ios.ipa"

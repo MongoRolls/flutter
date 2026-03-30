@@ -3,8 +3,8 @@
 #   在 .env 设置 KELEME_BACKEND_IMAGE=ghcr.io/<owner>/<repo>/keleme-backend:latest
 #   ./scripts/deploy-podman.sh --pull
 # 本地从源码构建 API 镜像：
-#   podman-compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml up -d --build
-# 迁移也可：podman-compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
+#   podman compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml up -d --build
+# 迁移也可：podman compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
 
 version: '3.9'
 
@@ -28,7 +28,13 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 15s
