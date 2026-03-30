@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/today_plan.dart';
 import '../providers/plan_provider.dart';
@@ -85,105 +86,60 @@ class ActionRow extends StatelessWidget {
     );
   }
 
-  void _confirmAdoptGoal(BuildContext context) {
+  Future<void> _confirmAdoptGoal(BuildContext context) async {
     final plan = planProvider.todayPlan;
     if (plan == null) return;
 
-    showDialog(
+    final ok = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          '设为今日目标',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
+      title: '设为今日目标',
+      message: '将每日饮水目标更新为 ${plan.totalMl}ml？',
+      confirmLabel: '确认',
+    );
+    if (ok != true || !context.mounted) return;
+    planProvider.adoptAsGoal();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: Text(
-          '将每日饮水目标更新为 ${plan.totalMl}ml？',
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          '✓ 已将今日目标更新为 ${plan.totalMl}ml',
+          style: const TextStyle(color: AppColors.textPrimary),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              planProvider.adoptAsGoal();
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '✓ 已将今日目标更新为 ${plan.totalMl}ml',
-                    style: const TextStyle(color: AppColors.textPrimary),
-                  ),
-                  backgroundColor: AppColors.bgCard,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-              );
-            },
-            child: const Text('确认'),
-          ),
-        ],
+        backgroundColor: AppColors.bgCard,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 4,
       ),
     );
   }
 
-  void _confirmSyncReminders(
+  Future<void> _confirmSyncReminders(
     BuildContext context,
     List<String> futureSlotTimes,
-  ) {
-    showDialog(
+  ) async {
+    final ok = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          '设置今日饮水提醒',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          '将为 ${futureSlotTimes.join(" / ")} 等 ${futureSlotTimes.length} 个时间点设置提醒，'
+      title: '设置今日饮水提醒',
+      message: '将为 ${futureSlotTimes.join(" / ")} 等 ${futureSlotTimes.length} 个时间点设置提醒，'
           '今日已有的计划提醒会被替换。',
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.textSecondary,
-            height: 1.5,
-          ),
+      confirmLabel: '确认',
+    );
+    if (ok != true || !context.mounted) return;
+    final scheduled = await planProvider.scheduleSlotReminders();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '✓ 已设置 $scheduled 个提醒',
+          style: const TextStyle(color: AppColors.textPrimary),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final scheduled = await planProvider.scheduleSlotReminders();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '✓ 已设置 $scheduled 个提醒',
-                      style: const TextStyle(color: AppColors.textPrimary),
-                    ),
-                    backgroundColor: AppColors.bgCard,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 4,
-                  ),
-                );
-              }
-            },
-            child: const Text('确认'),
-          ),
-        ],
+        backgroundColor: AppColors.bgCard,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 4,
       ),
     );
   }

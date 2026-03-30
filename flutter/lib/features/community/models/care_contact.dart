@@ -1,10 +1,14 @@
 class CareContact {
   final String id;
   final String name;
-  final String relationship; // 'mom' | 'dad' | 'partner' | 'friend'
+
+  /// 关系类型：'family' | 'friend'
+  final String relationship;
   final String avatarEmoji;
+
   /// 对方目标饮水量（占位；后续可由服务端同步对方 UserProfile.dailyGoalMl）
   final int mockDailyGoalMl;
+
   /// 对方今日已喝（占位；后续可由服务端同步或留空）
   int mockTodayMl;
 
@@ -40,18 +44,25 @@ class CareContact {
   factory CareContact.fromMap(Map<String, dynamic> map) => CareContact(
     id: map['id'] as String,
     name: map['name'] as String,
-    relationship: map['relationship'] as String,
+    relationship: _normalizeRelationship(map['relationship'] as String?),
     avatarEmoji: map['avatarEmoji'] as String,
     mockDailyGoalMl: map['mockDailyGoalMl'] as int? ?? 2000,
     mockTodayMl: map['mockTodayMl'] as int? ?? 0,
   );
 
+  /// 将历史值（mom/dad/partner）迁移为 family / friend。
+  static String _normalizeRelationship(String? raw) {
+    if (raw == null) return 'friend';
+    return switch (raw) {
+      'family' || 'friend' => raw,
+      'mom' || 'dad' || 'partner' => 'family',
+      _ => 'friend',
+    };
+  }
+
   /// 关系类型对应的显示文字
   String get relationshipLabel => switch (relationship) {
-    'mom' => '妈妈',
-    'dad' => '爸爸',
-    'partner' => '恋人',
-    'friend' => '朋友',
-    _ => relationship,
+    'family' => '家人',
+    _ => '朋友',
   };
 }

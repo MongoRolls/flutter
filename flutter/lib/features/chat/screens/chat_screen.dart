@@ -3,6 +3,7 @@ import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../models/chat_message.dart';
@@ -116,26 +117,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _confirmClear() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('清空对话'),
-        content: const Text('确定要清空所有对话记录吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              '取消',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('清空', style: TextStyle(color: AppColors.red)),
-          ),
-        ],
-      ),
+      title: '清空对话',
+      message: '确定要清空所有对话记录吗？',
+      cancelLabel: '取消',
+      confirmLabel: '清空',
+      isDestructive: true,
     );
     if (confirmed == true) {
       await _chatProvider?.clearHistory();

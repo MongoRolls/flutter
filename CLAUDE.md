@@ -162,3 +162,27 @@ Use `flutter run -v` for verbose output when debugging build or runtime issues.
 ## 项目结构
 
 - Flutter 前端和后端是分开的；调试集成问题时，检查 UserProvider 同步到后端作为常见故障点
+
+## OpenSpec（规范驱动开发）
+
+本仓库已在**根目录**初始化 [OpenSpec](https://github.com/Fission-AI/OpenSpec)（`openspec/config.yaml`）。用于在写代码前对齐 **proposal / spec delta / design / tasks**，并与 Cursor、Claude Code 的 slash 命令集成。
+
+### 范围（重要）
+
+- **默认纳入 OpenSpec 产物**：**Flutter 客户端**（`flutter/`）与 **后端**（`backend/`）。
+- **默认不纳入**：**Next.js 站点**（`web/`）。编写或评审规格、任务清单时**不要**把 `web/` 当作受影响路径，除非用户**明确**要求做官网相关或跨 `web/` 的变更。
+
+范围与规则写在 `openspec/config.yaml` 的 `context` 与 `rules` 中；生成或修改 OpenSpec 文档时应遵守。
+
+### CLI
+
+- 需要 **Node.js ≥ 20.19**（与 Flutter 无关，仅用于 OpenSpec CLI）。
+- 安装：`npm install -g @fission-ai/openspec@latest`（或使用 `npx @fission-ai/openspec@latest <command>`）。
+- 常用：`openspec list`、`openspec validate`、`openspec show`；变更工作流见官方文档。
+
+### 编辑器工作流（初始化时已写入）
+
+- Cursor：`.cursor/commands/` 下的 `/opsx:propose`、`/opsx:apply`、`/opsx:archive` 等；技能见 `.cursor/skills/openspec-*`。
+- Claude Code：`.claude/commands/opsx/` 与 `.claude/skills/openspec-*`。
+
+首次使用可执行 `/opsx:propose "描述你的需求"`，按提示在 `openspec/changes/<name>/` 下产出工件；实现完成后 `/opsx:archive` 归档并合并主规格。重启 IDE 后 slash 命令生效。

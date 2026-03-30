@@ -7,6 +7,8 @@ import '../../../core/models/drink_preset.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/utils/app_version.dart';
+import '../../../common/widgets/app_dialog.dart';
+import '../../../common/widgets/app_modal_sheet.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../../common/widgets/progress_ring.dart';
 import '../widgets/weather_goal_card.dart';
@@ -128,13 +130,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showQuickDrinkSheet() {
-    showModalBottomSheet(
+    showAppModalSheet<void>(
       context: context,
-      backgroundColor: AppColors.bgCard,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => _QuickDrinkSheet(
         presets: _p.drinkPresets,
         userProvider: _p,
@@ -193,8 +190,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     padding: const EdgeInsets.only(bottom: 24),
                     child: Text(
                       AppVersion.display,
-                      style: const TextStyle(
-                        color: Colors.white24,
+                      style: TextStyle(
+                        color: AppColors.textHint.withValues(alpha: 0.45),
                         fontSize: 11,
                         fontFamily: 'SpaceMono',
                       ),
@@ -213,16 +210,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildHeader(String name) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(
-        color: AppColors.bgCard,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: AppDecorations.topBar,
       child: Row(
         children: [
           GestureDetector(
@@ -936,19 +924,10 @@ class _QuickDrinkSheetState extends State<_QuickDrinkSheet> {
     final bottomPad = MediaQuery.of(context).viewPadding.bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + bottomPad),
+      padding: EdgeInsets.fromLTRB(4, 0, 4, 4 + bottomPad),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.divider,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
               const Expanded(
@@ -1105,13 +1084,8 @@ class _QuickDrinkSheetState extends State<_QuickDrinkSheet> {
 
   void _showManagePresetsSheet(BuildContext context) {
     Navigator.pop(context);
-    showModalBottomSheet(
+    showAppModalSheet<void>(
       context: context,
-      backgroundColor: AppColors.bgCard,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => _ManagePresetsSheet(userProvider: widget.userProvider),
     );
   }
@@ -1134,19 +1108,10 @@ class _ManagePresetsSheetState extends State<_ManagePresetsSheet> {
     final bottomPad = MediaQuery.of(context).viewPadding.bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + bottomPad),
+      padding: EdgeInsets.fromLTRB(4, 0, 4, 4 + bottomPad),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.divider,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
               const Expanded(
@@ -1287,22 +1252,14 @@ class _ManagePresetsSheetState extends State<_ManagePresetsSheet> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.bgCard,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          // Android 键盘弹出时，insetPadding 确保对话框不会被遮挡
+        builder: (ctx, setDialogState) => AppDialogScaffold(
           insetPadding: EdgeInsets.fromLTRB(
-            20,
             24,
-            20,
-            MediaQuery.of(ctx).viewInsets.bottom + 24,
+            24,
+            24,
+            MediaQuery.viewInsetsOf(ctx).bottom + 24,
           ),
-          title: Text(
-            isEditing ? '编辑杯子' : '添加新杯子',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
+          title: Text(isEditing ? '编辑杯子' : '添加新杯子'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1384,7 +1341,10 @@ class _ManagePresetsSheetState extends State<_ManagePresetsSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
+              child: const Text(
+                '取消',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             ),
             ElevatedButton(
               onPressed: () {

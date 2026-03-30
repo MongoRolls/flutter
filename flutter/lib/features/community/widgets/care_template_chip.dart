@@ -59,7 +59,7 @@ class CareTemplateChip extends StatelessWidget {
                 fontSize: 11,
                 color: isSelected
                     ? AppColors.pinkDark
-                    : const Color(0xFF78909C),
+                    : AppColors.textSecondary,
                 height: 1.4,
               ),
             ),

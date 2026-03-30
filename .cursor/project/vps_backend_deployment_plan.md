@@ -25,10 +25,9 @@
 2. **时间同步**：确认 `timedatectl` 时区正确（避免 JWT/日志混乱）。
 3. **防火墙**：放行 **22**（SSH）、**80/443**（HTTP/HTTPS）；若暂时直连调试 **3000**，仅建议内网或短期，生产用 Nginx。
 4. **内存（2G 建议）**：配置 **swap** 1–2G，降低 OOM 风险。
-5. **容器运行时（二选一）**  
-   - **A**：安装 **Podman** + **podman-compose**（与仓库文档一致），用 compose 起 PG + Redis。  
-   - **B**：安装 **Docker** + `docker compose`，使用同一套 `docker-compose.yml` / `docker-compose.prod.yml`。  
-   不打算用容器装数据库时，可改为 **本机安装** PostgreSQL 16 与 Redis 7（需自行对齐 `DATABASE_URL` / `REDIS_URL`）。
+5. **容器运行时**  
+   - 安装 **Podman** + **podman-compose**（与 `vps_backend_deploy_steps.md` §1 一致），用 `backend/docker-compose.yml` 起 PG + Redis（命令为 `podman-compose up -d`）。  
+   - 不打算用容器装数据库时，可改为 **本机安装** PostgreSQL 16 与 Redis 7（需自行对齐 `DATABASE_URL` / `REDIS_URL`）。
 
 ---
 

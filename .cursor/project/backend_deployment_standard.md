@@ -16,9 +16,9 @@
 | 决策 | 约定 |
 |------|------|
 | **默认架构** | **PM2 在宿主机运行 Node API**；**PostgreSQL + Redis 仅通过容器**（`backend/docker-compose.yml`）运行。 |
-| **代码上机** | 默认：VPS 上 **`git clone` / `git pull`**，在仓库内进入 `backend/` 部署。 **可选**：CI 构建 API 镜像推 **ghcr.io**，VPS `podman pull` + `podman-compose`（见 `backend/README.md`、`scripts/deploy-podman.sh`），**无需整仓 clone**。 |
+| **代码上机** | 默认：VPS 上 **`git clone` / `git pull`**，在仓库内进入 `backend/` 部署。可选全容器或 ghcr 镜像路径见 **`backend/README.md`**（`docker-compose.prod.yml` 等）。 |
 | **不推荐作为首选** | **全容器 API**（`docker-compose.prod.yml` 同时起 API+DB）在 **2C2G** 上资源更紧；详见 `backend/README.md` 再选。 |
-| **容器运行时** | 与仓库一致，优先 **Podman**（`docker-compose.yml` 文件名保留以兼容工具链，命令用 `podman-compose` / `podman compose`）。 |
+| **容器运行时** | VPS 文档与命令清单默认 **Podman** + **podman-compose**（`podman-compose up -d`）。`docker-compose.yml` 文件名保留以兼容工具链。 |
 | **生产迁移** | 仅在服务器执行 **`npx prisma migrate deploy`**，禁止在生产使用 `prisma migrate dev`。 |
 
 ### 2.1 为何默认选「PM2 + 仅 DB 容器」
@@ -83,7 +83,7 @@
 ## 6. 可选自动化
 
 - **GitHub Actions SSH 部署**：`push` 到默认分支后 SSH 到 VPS 执行 `deploy.sh --with-git-pull`——**不强制**。
-- **镜像发布**：`.github/workflows/backend-docker.yml` 在 `main` 推送且 `backend/**` 变更时构建并推送 **`ghcr.io/<仓库小写>/keleme-backend`**；VPS 配置 `KELEME_BACKEND_IMAGE` 后执行 `./scripts/deploy-podman.sh --pull`（见 `vps_backend_deploy_steps.md` 路线 B）。
+- **镜像发布**：`.github/workflows/backend-docker.yml` 在 `main` 推送且 `backend/**` 变更时构建并推送 **`ghcr.io/<仓库小写>/keleme-backend`**；服务器侧用镜像的完整流程见 **`backend/README.md`**（与 `docker-compose.prod.yml` 等）。
 
 ---
 

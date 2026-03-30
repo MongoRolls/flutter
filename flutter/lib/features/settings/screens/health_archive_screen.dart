@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/memory_fact.dart';
 import '../../../core/services/memory_service.dart';
+import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../common/widgets/glass_card.dart';
 
 class HealthArchiveScreen extends StatefulWidget {
@@ -84,16 +85,7 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(
-        color: AppColors.bgCard,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: AppDecorations.topBar,
       child: Row(
         children: [
           GestureDetector(
@@ -309,36 +301,14 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
   }
 
   Future<bool> _confirmDelete(MemoryFact fact) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          '删除记录',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        content: Text(
+      title: '删除记录',
+      message:
           '确定删除「${fact.content.length > 20 ? '${fact.content.substring(0, 20)}…' : fact.content}」？',
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              '取消',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      cancelLabel: '取消',
+      confirmLabel: '删除',
+      isDestructive: true,
     );
 
     if (confirmed == true) {

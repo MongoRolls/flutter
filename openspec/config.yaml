@@ -1,0 +1,27 @@
+schema: spec-driven
+
+# Injected into AI prompts for all OpenSpec artifacts (proposal, specs, design, tasks).
+context: |
+  Repository: KeLeME (渴了么), monorepo.
+
+  OpenSpec scope — include ONLY:
+  - Flutter app: `flutter/` (Dart; run Flutter commands from `flutter/`. Main state: `lib/core/providers/user_provider.dart`; services under `lib/core/services/`.)
+  - Backend API: `backend/` (server code, DB, HTTP routes.)
+
+  OpenSpec scope — EXCLUDE by default:
+  - Next.js marketing site: `web/` (do not reference, propose tasks for, or list as affected paths unless the user explicitly asks for a web-only or cross-cutting change involving `web/`.)
+
+  When writing proposals, spec deltas, design, and tasks:
+  - Point to real paths under `flutter/` and/or `backend/`.
+  - Do not assume changes under `web/` unless the change name or user request explicitly includes it.
+
+rules:
+  proposal:
+    - State clearly whether the change touches Flutter, backend, or both; never imply `web/` is in scope without explicit user intent.
+    - For integration work, call out sync/API boundaries between `flutter/` and `backend/`.
+  specs:
+    - Use Requirement + Scenario (Given/When/Then) for behavior under `flutter/` and `backend/` only.
+  design:
+    - Prefer files and modules under `flutter/lib/` and `backend/`; omit `web/` from design unless in scope.
+  tasks:
+    - Number or group tasks by `flutter/` vs `backend/`; do not add `web/` tasks unless the user scoped the change to include `web/`.

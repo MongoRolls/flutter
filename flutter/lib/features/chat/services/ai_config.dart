@@ -69,20 +69,5 @@ class AiConfig {
     return AiConfig(apiKey: key, keySource: source);
   }
 
-  static Future<void> saveApiKey(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, key.trim());
-  }
-
-  static Future<String> getSavedApiKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_prefsKey) ?? '';
-  }
-
-  static Future<void> setUseBackendProxy(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_useBackendKey, value);
-  }
-
   bool get hasApiKey => apiKey.isNotEmpty || useBackendProxy;
 }

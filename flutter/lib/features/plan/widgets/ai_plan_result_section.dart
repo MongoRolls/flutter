@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../../core/providers/user_provider.dart';
@@ -151,40 +152,19 @@ class AiPlanResultSection extends StatelessWidget {
     );
   }
 
-  void _confirmRegenerate(BuildContext context) {
-    showDialog(
+  Future<void> _confirmRegenerate(BuildContext context) async {
+    final ok = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          '重新生成计划',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
-        content: const Text(
-          '当前计划将被清除，需要重新由 AI 生成。确定要重新生成吗？',
-          style: TextStyle(
-            fontSize: 13,
-            color: AppColors.textSecondary,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (!context.mounted) return;
-              planProvider.reset();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orange),
-            child: const Text('重新生成'),
-          ),
-        ],
+      title: '重新生成计划',
+      message: '当前计划将被清除，需要重新由 AI 生成。确定要重新生成吗？',
+      cancelLabel: '取消',
+      confirmLabel: '重新生成',
+      confirmButtonStyle: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.orange,
+        foregroundColor: Colors.white,
       ),
     );
+    if (ok != true || !context.mounted) return;
+    planProvider.reset();
   }
 }

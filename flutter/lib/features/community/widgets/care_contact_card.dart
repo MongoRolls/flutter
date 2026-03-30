@@ -41,9 +41,7 @@ class _CareContactCardState extends State<CareContactCard>
 
   /// 头像渐变色映射
   List<Color> get _avatarGradient => switch (widget.contact.relationship) {
-    'mom' => [AppColors.pinkLight, const Color(0xFFF06292)],
-    'dad' => [const Color(0xFF64B5F6), const Color(0xFF42A5F5)],
-    'partner' => [const Color(0xFFFF8A65), const Color(0xFFFF7043)],
+    'family' => [AppColors.pinkLight, const Color(0xFFF06292)],
     _ => [const Color(0xFF81C784), AppColors.greenSoft],
   };
 
@@ -169,9 +167,7 @@ class _CareContactCardState extends State<CareContactCard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.contact.relationship == 'partner'
-                      ? '${widget.contact.name}（${widget.contact.relationshipLabel}）'
-                      : widget.contact.name,
+                  '${widget.contact.name}（${widget.contact.relationshipLabel}）',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

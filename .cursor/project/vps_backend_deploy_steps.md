@@ -2,7 +2,7 @@
 
 **规范与默认决策**（必读）：`.cursor/project/backend_deployment_standard.md`。
 
-面向 **CentOS Stream 9**、**2C2G**、**PM2 + Docker/Podman 仅跑 PG/Redis**。可选 **全容器** 见 `backend/docker-compose.prod.yml` 与 `backend/README.md`。背景见 `vps_backend_deployment_plan.md`。
+面向 **CentOS Stream 9**、**2C2G**、**PM2 + Podman 仅跑 PG/Redis**。可选 **全容器 API**（资源更紧）见 `backend/docker-compose.prod.yml` 与 `backend/README.md`。背景见 `vps_backend_deployment_plan.md`。
 
 ### 部署顺序怎么排
 
@@ -10,61 +10,15 @@
 |------|------|------|
 | **默认（PM2）** | §1 → §2～§6 → §7 | 先在本机验证 `curl http://127.0.0.1:3000/health`，再配 Nginx。 |
 | **可先 HTTPS** | §1 → **§7.1～§7.4**（占位）→ §2～§6 → **§7.5**（反代） | VPS 上尚未 `git clone`、没有 Node 时，也可先申请证书、浏览器看到占位 `ok`；**反代与 SSE** 必须等 **§6 PM2 起来** 再做。 |
-| **B：Podman 全栈 + ghcr 镜像** | §1 → **§B** → §7（反代目标改为 3000 上 API 容器，与 PM2 相同） | **无需整仓 `git clone`**：用 `scp` 或浅克隆只放 `backend/` 必要文件 + `podman pull` 镜像。详见 **§B**。 |
 
----
-
-## B. Podman 全栈 + 镜像（免整仓 clone）
-
-**前提**：仓库 `main` 已启用 **GitHub Actions** `.github/workflows/backend-docker.yml`，镜像在 ghcr.io（如 `ghcr.io/<owner>/<repo>/keleme-backend:latest`）。**2C2G** 上资源比「仅 DB 容器 + PM2」更紧，自行评估。
-
-### B.1 服务器安装
-
-```bash
-sudo dnf install -y podman podman-compose
-# 可选：不装 Node / PM2（本路线 API 在容器内）
-```
-
-### B.2 准备目录与文件（无需 git clone 整仓）
-
-在 VPS 上建目录（例如 `/opt/keleme-backend`），从本机 **scp** 或 **只 clone 仓库后只保留** 以下文件即可：
-
-- `backend/docker-compose.prod.yml`
-- `backend/scripts/deploy-podman.sh`（`chmod +x`）
-
-### B.3 配置 `.env`
-
-在**同一目录**（与 `docker-compose.prod.yml` 并列）创建 `.env`，可参考仓库内 `backend/.env.example`，至少包含：
-
-- `NODE_ENV=production`
-- `JWT_SECRET` / `JWT_REFRESH_SECRET` / `DEEPSEEK_API_KEY` / `CORS_ORIGIN`
-- `KELEME_BACKEND_IMAGE=ghcr.io/<你的仓库小写路径>/keleme-backend:latest`
-- `POSTGRES_PASSWORD`（强密码；compose 内 `postgres` 与 `api` 的 `DATABASE_URL` 会使用）
-
-**若镜像仓库为私有**：先 `podman login ghcr.io`（用户名 GitHub，密码为 PAT）。
-
-### B.4 启动与迁移
-
-```bash
-cd /opt/keleme-backend   # 你的目录
-./scripts/deploy-podman.sh --pull
-curl -s http://127.0.0.1:3000/health
-```
-
-后续更新：在 CI 已推送新镜像后，在同一目录执行 `./scripts/deploy-podman.sh --pull` 即可。
-
-### B.5 Nginx
-
-与 **§7.5** 相同，反代到 `127.0.0.1:3000`（API 容器映射端口）。SSE 段与 `backend/README.md` 一致。
-
-**勿与 PM2 同时占用 3000 端口**：若本机曾用 PM2 跑 API，需先停 PM2 再 `deploy-podman`。
+全容器 + ghcr 镜像的替代路径（`docker-compose.prod.yml`、`deploy-podman.sh` 等）见 **`backend/README.md`**，本文默认路线不再单独展开。
 
 ---
 
 ## 0. 本机 / 面板准备好
 
-- VPS 公网 IP、SSH 能登录  
-- 域名（可选）：`api.你的域名` → A 记录指向该 IP  
+- VPS 公网 IP、SSH 能登录
+- 域名（可选）：`api.你的域名` → A 记录指向该 IP
 - 随机串：`JWT_SECRET`、`JWT_REFRESH_SECRET`（各 ≥32 字符）、`DEEPSEEK_API_KEY`（`sk-` 开头）
 
 ---
@@ -78,14 +32,15 @@ timedatectl
 # 建议加 swap 1～2G（2G 内存机器）
 ```
 
-安装 **Git**、**Node 20**、**PM2**、**Podman**（或 Docker）+ compose：
+安装 **Git**、**Node 20**、**PM2**、**Podman** 与 **podman-compose**（后者为必须：`podman compose` 依赖可用的 Compose 提供者，仅装 `podman` 会报 `looking up compose provider failed`）。
 
 ```bash
 git --version
 node -v   # 应为 v20.x
 npm install -g pm2
 sudo dnf install -y podman podman-compose
-# 使用 compose 时：podman compose ... 或 podman-compose ...
+# 验证：podman --version && podman-compose --version
+# 可选：podman compose version（与 podman-compose 等价，需已安装 podman-compose）
 ```
 
 ---
@@ -105,7 +60,11 @@ cd keleme/backend
 ```bash
 git config --global http.postBuffer 524288000
 git config --global http.version HTTP/1.1
-git clone --depth 1 <地址> keleme
+git clone --depth=1 --filter=blob:none --sparse <仓库 URL> keleme
+cd keleme
+git sparse-checkout init --cone
+git sparse-checkout set backend
+cd backend
 ```
 
 继续 **§3**。
@@ -114,11 +73,10 @@ git clone --depth 1 <地址> keleme
 
 ## 3. 起 PostgreSQL + Redis（仅容器）
 
-**前提：** 当前目录为 `backend`，且存在项目自带的 `docker-compose.yml`（仅数据库）。
+**前提：** 当前目录为 `backend`，且存在项目自带的 `docker-compose.yml`（仅数据库）。Compose 文件名为 `docker-compose.yml` 是 OCI 惯例，**实际用 Podman 编排**。
 
 ```bash
-# Docker 示例；若用 Podman，把 docker 换成 podman
-docker compose up -d
+podman-compose up -d
 ```
 
 默认会映射 `5432`、`6379`。**生产**请在防火墙/安全组禁止公网访问这两个端口，仅本机连。
@@ -126,8 +84,10 @@ docker compose up -d
 确认：
 
 ```bash
-docker compose ps
+podman-compose ps
 ```
+
+（若已安装 `podman-compose`，也可使用 `podman compose up -d` / `podman compose ps`，与上式等价。）
 
 ---
 
@@ -176,6 +136,8 @@ pm2 startup
 ```
 
 验证：
+
+
 
 ```bash
 curl -s http://127.0.0.1:3000/health
@@ -262,8 +224,8 @@ curl -sI https://api.你的域名/
 
 当 `curl -s http://127.0.0.1:3000/health` 已通，编辑该域名的 **443** `server`（及如需统一的 `upstream`）：
 
-1. **`location /`**：`proxy_pass` 到 `http://127.0.0.1:3000`（推荐与 `backend/README.md` 中 **`upstream keleme_api`** 示例一致）。  
-2. **另加 `location /api/ai/chat`**：关闭 `proxy_buffering`、拉长 `proxy_read_timeout`（SSE 流式）— **全文见 `backend/README.md` →「PM2 + Nginx 反向代理」**。  
+1. **`location /`**：`proxy_pass` 到 `http://127.0.0.1:3000`（推荐与 `backend/README.md` 中 **`upstream keleme_api`** 示例一致）。
+2. **另加 `location /api/ai/chat`**：关闭 `proxy_buffering`、拉长 `proxy_read_timeout`（SSE 流式）— **全文见 `backend/README.md` →「PM2 + Nginx 反向代理」**。
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
@@ -290,7 +252,7 @@ sudo certbot renew --dry-run
 
 ## 9. 以后更新后端
 
-**PM2 路线（默认）**：在 `backend/` 使用 `scripts/deploy.sh`（含 `git pull`、依赖、迁移、构建、`pm2 reload`）。
+在 `backend/` 使用 `scripts/deploy.sh`（含 `git pull`、依赖、迁移、构建、`pm2 reload`）。
 
 ```bash
 cd /opt/keleme/backend   # 或你的部署路径
@@ -298,13 +260,6 @@ cd /opt/keleme/backend   # 或你的部署路径
 ```
 
 等价：`npm run deploy:prod:pull`。
-
-**路线 B（Podman 全栈 + ghcr）**：无需 `git pull`，CI 已推送新镜像后：
-
-```bash
-cd /opt/keleme-backend   # §B 中目录
-./scripts/deploy-podman.sh --pull
-```
 
 若已在该目录**手动** `git pull`，可只执行：
 

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../services/debug_service.dart';
 
@@ -652,33 +653,12 @@ class _DebugScreenState extends State<DebugScreen> {
     String confirmMessage,
     Future<TestResult> Function() test,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          '确认操作',
-          style: TextStyle(color: AppColors.textPrimary),
-        ),
-        content: Text(
-          confirmMessage,
-          style: const TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              '取消',
-              style: TextStyle(color: AppColors.textHint),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('确认', style: TextStyle(color: AppColors.orange)),
-          ),
-        ],
-      ),
+      title: '确认操作',
+      message: confirmMessage,
+      cancelLabel: '取消',
+      confirmLabel: '确认',
     );
     if (confirmed == true) {
       await _runTest(label, test);

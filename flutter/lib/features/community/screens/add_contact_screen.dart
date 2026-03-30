@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../common/widgets/app_modal_sheet.dart';
+import '../../../common/widgets/app_toast.dart';
 import '../../../core/services/backend_api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/backend_api_error_message.dart';
 import '../models/care_contact.dart';
+import 'scan_friend_code_screen.dart';
 
-/// 添加关怀联系人页面
+/// 添加关怀联系人页面（结构化表单：好友码、关系、备注、头像）
 class AddContactScreen extends StatefulWidget {
   const AddContactScreen({super.key});
 
@@ -22,12 +25,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   bool _isSaving = false;
 
   static const _emojiOptions = ['😊', '👩', '👨', '🧡', '👧', '👦', '🧓', '👴'];
-  static const _relationshipOptions = [
-    ('mom', '妈妈'),
-    ('dad', '爸爸'),
-    ('partner', '恋人'),
-    ('friend', '朋友'),
-  ];
+  static const _relationshipOptions = [('family', '家人'), ('friend', '朋友')];
 
   @override
   void dispose() {
@@ -36,19 +34,30 @@ class _AddContactScreenState extends State<AddContactScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
-    final code = _friendCodeController.text.trim().toUpperCase();
-    final name = _nameController.text.trim();
-    if (code.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请输入好友短码')));
+  Future<void> _openScan() async {
+    if (!supportsFriendCodeScan) {
+      AppToast.info(context, '当前设备请使用输入框输入好友短码');
       return;
     }
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请输入名字')));
+    final code = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const ScanFriendCodeScreen()),
+    );
+    if (!mounted || code == null || code.isEmpty) return;
+    setState(() => _friendCodeController.text = code);
+  }
+
+  String _resolveNickname(String trimmedRemark, Map<String, dynamic> lookup) {
+    if (trimmedRemark.isNotEmpty) return trimmedRemark;
+    final remote = (lookup['nickname'] as String?)?.trim();
+    if (remote != null && remote.isNotEmpty) return remote;
+    return '水友';
+  }
+
+  Future<void> _save() async {
+    final code = _friendCodeController.text.trim().toUpperCase();
+    final remark = _nameController.text.trim();
+    if (code.isEmpty) {
+      AppToast.error(context, '请输入好友短码');
       return;
     }
 
@@ -57,11 +66,12 @@ class _AddContactScreenState extends State<AddContactScreen> {
       final backend = BackendApiService.instance;
       final lookup = await backend.lookupFriendCode(code);
       final contactId = lookup['userId'] as String;
-      await backend.createCareContact(contactId: contactId, nickname: name);
+      final nickname = _resolveNickname(remark, lookup);
+      await backend.createCareContact(contactId: contactId, nickname: nickname);
 
       final contact = CareContact(
         id: contactId,
-        name: name,
+        name: nickname,
         relationship: _relationship,
         avatarEmoji: _avatarEmoji,
       );
@@ -70,17 +80,15 @@ class _AddContactScreenState extends State<AddContactScreen> {
     } catch (e) {
       if (!mounted) return;
       final msg = backendApiErrorMessage(e);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      AppToast.error(context, msg);
       setState(() => _isSaving = false);
     }
   }
 
-  Future<void> _showMyFriendCodeDialog() async {
-    final messenger = ScaffoldMessenger.of(context);
-    await showDialog<void>(
+  Future<void> _showMyFriendCodeSheet() async {
+    await showAppModalSheet<void>(
       context: context,
-      builder: (dialogContext) =>
-          _MyFriendCodeDialog(messenger: messenger, dialogContext: dialogContext),
+      builder: (sheetContext) => const _MyFriendCodeSheet(),
     );
   }
 
@@ -92,7 +100,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: _showMyFriendCodeDialog,
+            onPressed: _showMyFriendCodeSheet,
             child: const Text('我的短码'),
           ),
         ],
@@ -100,7 +108,118 @@ class _AddContactScreenState extends State<AddContactScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // 头像选择
+          // 好友短码
+          const Text(
+            '好友短码',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _friendCodeController,
+                  textCapitalization: TextCapitalization.characters,
+                  maxLength: 12,
+                  decoration: InputDecoration(
+                    hintText: '输入或扫码（例如 AB3K9Q）',
+                    counterText: '',
+                    filled: true,
+                    fillColor: AppColors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.divider),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.blue),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.blueLight,
+                    foregroundColor: AppColors.blueDark,
+                  ),
+                  onPressed: _openScan,
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  tooltip: '扫码添加',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 关系
+          const Text(
+            '关系',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            children: _relationshipOptions.map((option) {
+              final isSelected = option.$1 == _relationship;
+              return ChoiceChip(
+                label: Text(option.$2),
+                selected: isSelected,
+                selectedColor: AppColors.pinkBgMedium,
+                onSelected: (_) => setState(() => _relationship = option.$1),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+
+          // 备注（可选）
+          const Text(
+            '昵称备注（可选）',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              hintText: '不填则使用对方昵称或默认「水友」',
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.divider),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.divider),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.blue),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 头像
           const Text(
             '选择头像',
             style: TextStyle(
@@ -137,99 +256,8 @@ class _AddContactScreenState extends State<AddContactScreen> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 24),
-
-          // 好友短码
-          const Text(
-            '好友短码',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _friendCodeController,
-            textCapitalization: TextCapitalization.characters,
-            maxLength: 12,
-            decoration: InputDecoration(
-              hintText: '输入对方短码（例如 AB3K9Q）',
-              filled: true,
-              fillColor: AppColors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.divider),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.divider),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.blue),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // 名字输入
-          const Text(
-            '备注名',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              hintText: '输入你给 TA 的备注',
-              filled: true,
-              fillColor: AppColors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.divider),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.divider),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.blue),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // 关系选择
-          const Text(
-            '关系',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 10,
-            children: _relationshipOptions.map((option) {
-              final isSelected = option.$1 == _relationship;
-              return ChoiceChip(
-                label: Text(option.$2),
-                selected: isSelected,
-                selectedColor: AppColors.pinkBgMedium,
-                onSelected: (_) => setState(() => _relationship = option.$1),
-              );
-            }).toList(),
-          ),
           const SizedBox(height: 40),
 
-          // 保存按钮
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -245,7 +273,10 @@ class _AddContactScreenState extends State<AddContactScreen> {
               ),
               child: Text(
                 _isSaving ? '添加中…' : '添加',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -255,21 +286,15 @@ class _AddContactScreenState extends State<AddContactScreen> {
   }
 }
 
-/// 在 [initState] 中拉取短码，避免在 [build] 里触发异步副作用。
-class _MyFriendCodeDialog extends StatefulWidget {
-  const _MyFriendCodeDialog({
-    required this.messenger,
-    required this.dialogContext,
-  });
-
-  final ScaffoldMessengerState messenger;
-  final BuildContext dialogContext;
+/// 底部弹层：展示我的好友短码（非 AlertDialog）
+class _MyFriendCodeSheet extends StatefulWidget {
+  const _MyFriendCodeSheet();
 
   @override
-  State<_MyFriendCodeDialog> createState() => _MyFriendCodeDialogState();
+  State<_MyFriendCodeSheet> createState() => _MyFriendCodeSheetState();
 }
 
-class _MyFriendCodeDialogState extends State<_MyFriendCodeDialog> {
+class _MyFriendCodeSheetState extends State<_MyFriendCodeSheet> {
   String _friendCode = '';
   String? _loadError;
   bool _isLoading = true;
@@ -317,47 +342,72 @@ class _MyFriendCodeDialogState extends State<_MyFriendCodeDialog> {
     }
   }
 
+  Future<void> _copy(BuildContext outerContext) async {
+    if (_friendCode.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: _friendCode));
+    if (!outerContext.mounted) return;
+    AppToast.info(outerContext, '已复制到剪贴板');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('我的好友短码'),
-      content: _isLoading
-          ? const SizedBox(
-              height: 48,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : (_loadError != null)
-              ? Text(
-                  _loadError!,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                    height: 1.4,
-                  ),
-                )
-              : SelectableText(
-                  _friendCode,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2,
-                  ),
-                ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(widget.dialogContext).pop(),
-          child: const Text('关闭'),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          '我的好友短码',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
         ),
-        TextButton(
-          onPressed: _isLoading || _loadError != null || _friendCode.isEmpty
-              ? null
-              : () async {
-                  await Clipboard.setData(ClipboardData(text: _friendCode));
-                  widget.messenger.showSnackBar(
-                    const SnackBar(content: Text('已复制到剪贴板')),
-                  );
-                },
-          child: const Text('复制'),
+        const SizedBox(height: 16),
+        if (_isLoading)
+          const SizedBox(
+            height: 80,
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_loadError != null)
+          Text(
+            _loadError!,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          )
+        else
+          SelectableText(
+            _friendCode,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('关闭'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed:
+                    _isLoading || _loadError != null || _friendCode.isEmpty
+                    ? null
+                    : () => _copy(context),
+                child: const Text('复制'),
+              ),
+            ),
+          ],
         ),
         TextButton(
           onPressed: _isLoading ? null : _rotate,

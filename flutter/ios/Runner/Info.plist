@@ -61,6 +61,8 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>渴了么需要获取您的位置来提供当地天气信息，以便为您推荐更准确的饮水量</string>
+	<key>NSCameraUsageDescription</key>
+	<string>渴了么需要使用相机扫描好友短码，以便添加关怀联系人</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

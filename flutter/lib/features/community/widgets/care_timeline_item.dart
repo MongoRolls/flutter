@@ -11,14 +11,14 @@ class CareTimelineItem extends StatelessWidget {
 
   Color get _dotColor => switch (record.dotType) {
     'pink' => AppColors.pink,
-    'blue' => const Color(0xFF4FC3F7),
+    'blue' => AppColors.skyBright,
     'purple' => AppColors.purpleSoft,
     _ => AppColors.textHint,
   };
 
   List<Color> get _dotGradient => switch (record.dotType) {
     'pink' => [AppColors.pink, const Color(0xFFFF8A65)],
-    'blue' => [const Color(0xFF4FC3F7), const Color(0xFF0288D1)],
+    'blue' => [AppColors.skyBright, AppColors.blueDark],
     'purple' => [AppColors.purpleSoft, const Color(0xFF7E57C2)],
     _ => [AppColors.textHint, const Color(0xFF78909C)],
   };

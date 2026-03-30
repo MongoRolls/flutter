@@ -87,7 +87,7 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
     return MaterialApp(
       title: '渴了么',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
       home: _isLoading
           ? const Scaffold(
               backgroundColor: AppColors.bgDeep,

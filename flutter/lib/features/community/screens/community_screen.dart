@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../common/widgets/app_toast.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -72,6 +73,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
     if (!mounted || result == null) return;
     await widget.heartProvider.addContact(result);
+    if (!mounted) return;
+    AppToast.success(context, '添加成功');
   }
 
   Future<void> _sendCare() async {
@@ -81,9 +84,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         .where((c) => _selectedRecipientIds.contains(c.id))
         .toList();
     if (list.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先选择要提醒的人')));
+      AppToast.info(context, '请先选择要提醒的人');
       return;
     }
     setState(() => _isSending = true);
@@ -95,20 +96,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
       _selectedRecipientIds.clear();
       _showSendPanel = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('已发送提醒 ✓'),
-        backgroundColor: AppColors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    AppToast.success(context, '已发送提醒');
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_isLoaded) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.blue),
+      );
     }
     return Scaffold(
       backgroundColor: AppColors.bgMain,
@@ -210,10 +206,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: CareContactCard(
                     contact: c,
-                    onRemind: () => widget.heartProvider.sendCare(
-                      message: '提醒你喝水 💧',
-                      recipients: [c],
-                    ),
+                    onRemind: () async {
+                      await widget.heartProvider.sendCare(
+                        message: '提醒你喝水 💧',
+                        recipients: [c],
+                      );
+                      if (!mounted) return;
+                      AppToast.success(context, '关怀已发送');
+                    },
                   ),
                 ),
               ),

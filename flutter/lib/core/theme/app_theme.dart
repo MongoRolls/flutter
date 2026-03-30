@@ -1,6 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// 与 `web/app/globals.css`（`:root` light）中 `--radius` 阶梯对齐（逻辑像素取整）。
+abstract final class AppRadius {
+  static const double sm = 9.6;
+  static const double md = 12.8;
+  static const double lg = 16;
+  static const double xl = 22.4;
+  static const double x2l = 28.8;
+  static const double x3l = 35.2;
+  static const double x4l = 41.6;
+}
+
+/// 与官网 GlassCard / 顶栏阴影意图一致的 `BoxShadow` 近似（非像素级一致）。
+abstract final class AppShadows {
+  /// `shadow-[0_2px_12px_rgba(0,0,0,0.06)]`
+  static const List<BoxShadow> card = [
+    BoxShadow(color: Color(0x0F000000), blurRadius: 12, offset: Offset(0, 2)),
+  ];
+
+  /// 顶栏/轻分割条（略轻于 card）
+  static const List<BoxShadow> bar = [
+    BoxShadow(color: Color(0x0C000000), blurRadius: 8, offset: Offset(0, 2)),
+  ];
+}
+
+/// 复用与 GlassCard / 顶栏一致的装饰，减少各屏魔法数字。
+abstract final class AppDecorations {
+  /// 首页、设置等顶部白条区域（非全圆角卡片）
+  static const BoxDecoration topBar = BoxDecoration(
+    color: AppColors.bgCard,
+    boxShadow: AppShadows.bar,
+  );
+}
+
 class AppColors {
   // Backgrounds
   static const bgMain = Color(0xFFF5F8FF);
@@ -12,6 +45,9 @@ class AppColors {
   static const blueDark = Color(0xFF0288D1);
   static const blueLight = Color(0xFFE3F2FD);
   static const blueBorder = Color(0xFFBBDEFB);
+
+  /// `--kelem-sky-bright`
+  static const skyBright = Color(0xFF4FC3F7);
 
   // Semantic
   static const green = Color(0xFF4CAF50);
@@ -35,12 +71,14 @@ class AppColors {
   static const pinkBgMedium = Color(0x20FF6B9D);
   static const pinkBorder = Color(0x50FF6B9D);
 
-  // Text
+  // Text（与 `--foreground` / `--muted-foreground` 等对齐）
   static const textPrimary = Color(0xFF1A2340);
   static const textSecondary = Color(0xFF546E7A);
   static const textHint = Color(0xFF90A4AE);
   static const textDark = Color(0xFF455A64);
-  static const textBody = Color(0xFF1A1A2E);
+
+  /// 与 `textPrimary`（`--foreground`）一致，避免与官网正文色分叉。
+  static const textBody = Color(0xFF1A2340);
 
   // Neutral
   static const grey = Color(0xFFBDBDBD);
@@ -51,9 +89,12 @@ class AppColors {
   static const yellowLight = Color(0xFFFFF8E1);
   static const white = Color(0xFFFFFFFF);
 
-  // Divider / Shadow
+  // Divider / Shadow / Glass
   static const divider = Color(0xFFE8EFF5);
   static const shadow = Color(0x0F000000);
+
+  /// `border-white/60`（浅底上的玻璃边）
+  static const glassBorder = Color(0x99FFFFFF);
 
   static TextStyle monoStyle(Color color) =>
       GoogleFonts.spaceMono(color: color, fontWeight: FontWeight.w700);
@@ -72,14 +113,24 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData get darkTheme {
+  /// 仅 light；与官网 light token 对齐（不对齐 `.dark`）。
+  static ThemeData get lightTheme {
     return ThemeData(
       brightness: Brightness.light,
+      useMaterial3: false,
       scaffoldBackgroundColor: AppColors.bgMain,
       colorScheme: const ColorScheme.light(
         primary: AppColors.blue,
-        secondary: AppColors.orange,
+        onPrimary: Colors.white,
+        secondary: AppColors.blueLight,
+        onSecondary: AppColors.blueDark,
         surface: AppColors.bgCard,
+        onSurface: AppColors.textPrimary,
+        error: AppColors.red,
+        onError: Colors.white,
+        outline: AppColors.divider,
+        secondaryContainer: AppColors.blueLight,
+        onSecondaryContainer: AppColors.blueDark,
       ),
       textTheme: GoogleFonts.notoSansScTextTheme(
         const TextTheme(
@@ -119,11 +170,32 @@ class AppTheme {
         shadowColor: AppColors.shadow,
         foregroundColor: AppColors.textPrimary,
       ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.bgCard,
+        selectedItemColor: AppColors.blue,
+        unselectedItemColor: AppColors.textHint,
+        elevation: 8,
+      ),
       cardTheme: CardThemeData(
         color: AppColors.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
         elevation: 0,
         shadowColor: AppColors.shadow,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.x2l),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: AppColors.bgCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.x2l)),
+        ),
       ),
       dividerColor: AppColors.divider,
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -156,6 +228,9 @@ class AppTheme {
       ),
     );
   }
+
+  /// 历史命名：与 [lightTheme] 相同，应用仅使用 light 外观。
+  static ThemeData get darkTheme => lightTheme;
 
   static TextStyle get monoStyle =>
       GoogleFonts.spaceMono(color: AppColors.blue, fontWeight: FontWeight.w700);
