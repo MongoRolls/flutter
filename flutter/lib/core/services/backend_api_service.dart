@@ -329,8 +329,15 @@ class BackendApiService {
 
   Future<List<Map<String, dynamic>>> getCareContacts() async {
     final r = await get('/api/care/contacts');
-    final list = r.data as List<dynamic>;
-    return list.cast<Map<String, dynamic>>();
+    final data = r.data;
+    if (data is! List) {
+      throw DioException(
+        requestOptions: r.requestOptions,
+        message:
+            'GET /api/care/contacts: expected JSON array, got ${data.runtimeType}',
+      );
+    }
+    return data.cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> createCareContact({
@@ -360,16 +367,45 @@ class BackendApiService {
   }
 
   Future<Map<String, dynamic>> lookupFriendCode(String code) async {
+    // 与后端 `normalizeFriendCode` 一致，避免带空格粘贴导致 query 长度不足
+    final normalized = code.trim().replaceAll(' ', '').toUpperCase();
     final r = await get(
       '/api/care/friend-lookup',
-      queryParameters: {'code': code.trim().toUpperCase()},
+      queryParameters: {'code': normalized},
     );
     return r.data as Map<String, dynamic>;
   }
 
-  /// Deletes a memory fact on the server. Returns 204 with no body on success.
-  Future<void> deleteMemoryFact(String id) async {
-    await delete('/api/memory/$id');
+  /// 关怀好友当日饮水摘要（需登录）
+  Future<List<Map<String, dynamic>>> getPeersHydration({
+    required String date,
+    int tzOffset = 0,
+  }) async {
+    final r = await get(
+      '/api/care/peers/hydration',
+      queryParameters: {'date': date, 'tzOffset': tzOffset},
+    );
+    final data = r.data;
+    if (data is! List) {
+      throw DioException(
+        requestOptions: r.requestOptions,
+        message:
+            'GET /api/care/peers/hydration: expected JSON array, got ${data.runtimeType}',
+      );
+    }
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  /// 向关怀好友发送喝水提醒模板（需登录）
+  Future<Map<String, dynamic>> sendCareRemind({
+    required String contactId,
+    required int templateId,
+  }) async {
+    final r = await post(
+      '/api/care/remind',
+      data: {'contactId': contactId, 'templateId': templateId},
+    );
+    return r.data as Map<String, dynamic>;
   }
 
   // ── Team challenges ───────────────────────────────────────

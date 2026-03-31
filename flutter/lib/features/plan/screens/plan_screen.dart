@@ -138,7 +138,8 @@ class _PlanScreenState extends State<PlanScreen> {
     }
 
     if (status == PlanStatus.generating) {
-      return _buildSpinnerButton('AI 生成中...');
+      // 加载主反馈在 StreamingTextCard 内，此处避免与卡片重复「生成中」文案
+      return const SizedBox.shrink();
     }
 
     if (status == PlanStatus.parseError) {

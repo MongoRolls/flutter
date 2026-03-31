@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../common/widgets/scroll_wheel_time_picker.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/wake_bed_time.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/utils/app_version.dart';
 import '../../../common/widgets/glass_card.dart';
+import '../widgets/voice_tone_prefs.dart';
 import 'health_archive_screen.dart';
+import 'watch_preview_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final UserProvider userProvider;
@@ -26,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _wakeTime;
   late String _bedTime;
   late int _intervalMin;
+  String _voiceToneId = VoiceTonePrefs.defaultId;
 
   int _debugTapCount = 0;
   DateTime? _lastDebugTap;
@@ -41,6 +46,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _wakeTime = profile.wakeTime;
     _bedTime = profile.bedTime;
     _intervalMin = profile.reminderIntervalMin;
+    _loadVoiceToneId();
+  }
+
+  Future<void> _loadVoiceToneId() async {
+    final id = await VoiceTonePrefs.getSelectedId();
+    if (!mounted) return;
+    setState(() => _voiceToneId = id);
+  }
+
+  void _onSettingsWakeTimePicked(String t) {
+    final r = WakeBedTime.afterWakePick(newWakeHhMm: t, bedHhMm: _bedTime);
+    setState(() {
+      _wakeTime = r.wake;
+      _bedTime = r.bed;
+    });
+    if (r.snackMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(r.snackMessage!),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _onSettingsBedTimePicked(String t) {
+    final r = WakeBedTime.afterBedPick(wakeHhMm: _wakeTime, newBedHhMm: t);
+    setState(() {
+      _wakeTime = r.wake;
+      _bedTime = r.bed;
+    });
+    if (r.snackMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(r.snackMessage!),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -115,6 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   _buildBasicSettings(),
                   _buildReminderSwitches(),
+                  _buildWatchPreviewEntry(),
                   _buildReminderTime(),
                   _buildHealthArchive(),
                   _buildTestButton(),
@@ -246,6 +291,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 8),
           _styleChips(),
 
+          const SizedBox(height: 14),
+          _label('音色'),
+          const SizedBox(height: 8),
+          _voiceToneChips(),
+
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -273,6 +323,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Text(
               '${s.$1} ${s.$2}',
+              style: TextStyle(
+                fontSize: 13,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// 与 [_styleChips] 同款：音色预设 Chip，选中即写入 [VoiceTonePrefs]。
+  Widget _voiceToneChips() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: VoiceTonePrefs.presets.map((preset) {
+        final isSelected = preset.id == _voiceToneId;
+        return GestureDetector(
+          onTap: () async {
+            await VoiceTonePrefs.setSelectedId(preset.id);
+            if (!mounted) return;
+            setState(() => _voiceToneId = preset.id);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.blue : AppColors.bgSection,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '${preset.emoji} ${preset.title}',
               style: TextStyle(
                 fontSize: 13,
                 color: isSelected ? Colors.white : AppColors.textSecondary,
@@ -322,6 +406,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWatchPreviewEntry() {
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('⌚', 'Apple Watch'),
+          const SizedBox(height: 4),
+          const Text(
+            '手表端能力预览（规划中），无独立安装包',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
+          const SizedBox(height: 8),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        WatchPreviewScreen(userProvider: widget.userProvider),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.blue.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: const Icon(
+                        Icons.watch_outlined,
+                        size: 18,
+                        color: AppColors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '查看手表预览',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            '表盘与通知样式示意（占位）',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textHint,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textHint,
+                      size: 22,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -390,12 +554,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionTitle('⏰', '提醒时间'),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
+          const Text(
+            '同一天内起床须早于就寝；与引导页相同的时间滚轮',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint, height: 1.35),
+          ),
+          const SizedBox(height: 12),
 
-          _timeRow('起床时间', _wakeTime, (t) => setState(() => _wakeTime = t)),
+          _timeRow(
+            '起床时间',
+            _wakeTime,
+            _onSettingsWakeTimePicked,
+          ),
           Container(height: 1, color: AppColors.divider),
           const SizedBox(height: 12),
-          _timeRow('就寝时间', _bedTime, (t) => setState(() => _bedTime = t)),
+          _timeRow(
+            '就寝时间',
+            _bedTime,
+            _onSettingsBedTimePicked,
+          ),
 
           const SizedBox(height: 16),
           _label('提醒间隔'),
@@ -482,29 +659,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Spacer(),
           GestureDetector(
             onTap: () async {
-              final parts = time.split(':');
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay(
-                  hour: int.parse(parts[0]),
-                  minute: int.parse(parts[1]),
-                ),
-                initialEntryMode: TimePickerEntryMode.input,
-                builder: (context, child) => Theme(
-                  data: Theme.of(context).copyWith(
-                    colorScheme: const ColorScheme.light(
-                      primary: AppColors.blue,
-                    ),
-                  ),
-                  child: child!,
-                ),
+              await showScrollWheelTimePicker(
+                context,
+                initialHhMm: time,
+                onConfirm: onChanged,
               );
-              if (picked != null) {
-                if (!mounted) return;
-                onChanged(
-                  '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}',
-                );
-              }
+              if (!mounted) return;
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),

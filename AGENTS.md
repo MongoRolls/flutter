@@ -161,7 +161,7 @@ Constructor injection only. Pass providers explicitly — no GetIt or service lo
 
 ### Networking
 
-`dio` for HTTP requests. `BackendApiService` defaults to **`https://api.mongorolls.cn`**; override with `--dart-define=BACKEND_URL=...` (e.g. `http://localhost:3000` for local backend). AI backend calls go through `AiService`. The AI API key is injected at build time via `--dart-define=DEEPSEEK_API_KEY=...`.
+`dio` for HTTP requests. `BackendApiService` defaults to **`https://api.mongorolls.cn`**; override with `--dart-define=BACKEND_URL=...` (e.g. `http://localhost:3000` for local backend), or shorter: `--dart-define-from-file=dart_defines/dev.env`, or from `flutter/` run **`./scripts/run_dev.sh`** (defaults to `-d macos`). AI backend calls go through `AiService`. The AI API key is injected at build time via `--dart-define=DEEPSEEK_API_KEY=...`.
 
 ### Backend / VPS（仓库约定）
 

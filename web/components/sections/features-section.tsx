@@ -37,8 +37,8 @@ const features = [
     mobileBg: "bg-kelem-sky/10 dark:bg-kelem-sky/15",
   },
   {
-    title: "社区关怀",
-    desc: "与同伴一起坚持，温柔不打扰。",
+    title: "心连心",
+    desc: "让每一杯水都有温度。",
     icon: Users,
     accent: "text-kelem-pink",
     mobileBg: "bg-kelem-pink/10 dark:bg-kelem-pink/15",

@@ -4,6 +4,8 @@
   "description": "渴了么 AI 饮水提醒 App 后端服务",
   "type": "module",
   "scripts": {
+    "db:seed": "prisma db seed",
+    "db:demo-today": "tsx scripts/append-demo-today-logs.ts",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
@@ -12,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
+    "db:studio:headless": "prisma studio --browser none",
     "db:reset": "prisma migrate reset",
     "deploy:prod": "bash scripts/deploy.sh",
     "deploy:prod:pull": "bash scripts/deploy.sh --with-git-pull",

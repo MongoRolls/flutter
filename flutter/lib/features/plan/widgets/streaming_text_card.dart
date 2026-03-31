@@ -80,39 +80,13 @@ class _StreamingTextCardState extends State<StreamingTextCard>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 顶部标签
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.blueLight,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        color: AppColors.blue,
-                      ),
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'AI 正在生成计划',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.blue,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          const Text(
+            '正在生成今日饮水计划',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -170,15 +144,6 @@ class _StreamingTextCardState extends State<StreamingTextCard>
                 ),
                 textAlign: TextAlign.center,
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // 底部提示
-          const Center(
-            child: Text(
-              '正在根据你的情况定制专属饮水计划...',
-              style: TextStyle(fontSize: 11, color: AppColors.textHint),
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/models/drink_log.dart';
@@ -195,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   _buildMiniStats(),
                   _buildScheduleCard(),
                   _buildStreakCalendar(now),
+                  _buildMonthlyStats(now),
                   const SizedBox(height: 8),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 24),
@@ -949,6 +951,392 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildMonthlyStats(DateTime now) {
+    final today = now.day;
+    final monthlyHits = _p.monthlyHits;
+    final goalMl = _p.profile.dailyGoalMl;
+
+    // 本月总摄入
+    final totalMl = monthlyHits.entries
+        .where((e) => e.key <= today)
+        .fold<int>(0, (sum, e) => sum + e.value);
+
+    // 有摄入记录的天数（打卡天数）
+    final checkinDays = monthlyHits.entries
+        .where((e) => e.key <= today && e.value > 0)
+        .length;
+
+    // 日均摄入：用有记录天数作分母，避免月初或无数据时显示 0
+    final avgMl = checkinDays > 0 ? (totalMl / checkinDays).round() : 0;
+
+    // 达标天数
+    final achievedDays = monthlyHits.entries
+        .where((e) => e.key <= today && e.value >= goalMl)
+        .length;
+
+    // 达标率（分母用已过天数，反映整月履约情况）
+    final achieveRate = today > 0 ? (achievedDays / today * 100).round() : 0;
+
+    // 本月累计进度（截至今日）
+    final monthGoalMl = goalMl * today;
+    final totalProgress = monthGoalMl > 0
+        ? (totalMl / monthGoalMl).clamp(0.0, 1.0)
+        : 0.0;
+
+    // ── 柱状图数据 ──────────────────────────────────────────────
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    double maxY = goalMl.toDouble();
+    for (final e in monthlyHits.entries) {
+      if (e.key <= today && e.value > maxY) maxY = e.value.toDouble();
+    }
+    maxY = (maxY * 1.25).ceilToDouble();
+
+    final barGroups = <BarChartGroupData>[];
+    for (var d = 1; d <= daysInMonth; d++) {
+      final ml = (monthlyHits[d] ?? 0).toDouble();
+      final achieved = d <= today && ml >= goalMl;
+      final isFuture = d > today;
+      barGroups.add(
+        BarChartGroupData(
+          x: d,
+          barRods: [
+            BarChartRodData(
+              toY: isFuture ? 0 : ml,
+              width: daysInMonth <= 20 ? 7 : 5,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(3),
+              ),
+              color: isFuture
+                  ? Colors.transparent
+                  : achieved
+                  ? AppColors.blue
+                  : AppColors.greyLight,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 每 5 天显示一个 X 轴标签
+    Widget bottomTitleWidgets(double value, TitleMeta meta) {
+      final d = value.toInt();
+      if (d % 5 != 0 && d != 1 && d != daysInMonth) {
+        return const SizedBox.shrink();
+      }
+      return SideTitleWidget(
+        axisSide: meta.axisSide,
+        child: Text(
+          '$d',
+          style: GoogleFonts.spaceMono(fontSize: 8, color: AppColors.textHint),
+        ),
+      );
+    }
+
+    // 主数值显示：自动选 L 或 ml
+    final totalDisplay = totalMl >= 1000
+        ? (totalMl / 1000).toStringAsFixed(1)
+        : '$totalMl';
+    final totalUnit = totalMl >= 1000 ? 'L' : 'ml';
+    final avgDisplay = avgMl >= 1000
+        ? (avgMl / 1000).toStringAsFixed(1)
+        : '$avgMl';
+    final avgUnit = avgMl >= 1000 ? 'L' : 'ml';
+
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── 标题行 ─────────────────────────────────────────────
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: AppColors.blue,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                '本月统计',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${now.month} 月数据',
+                style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── 主指标：总摄入大数字 + 进度环 ──────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '本月总摄入',
+                      style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          totalDisplay,
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 42,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            height: 1,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 5, left: 4),
+                          child: Text(
+                            totalUnit,
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.blue,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // 进度条
+                    _WaterProgressBar(
+                      progress: totalProgress,
+                      color: AppColors.blue,
+                      bgColor: AppColors.blueLight,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '截至今日累计达成 ${(totalProgress * 100).round()}%',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textHint,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // 进度环
+              _WaterRing(
+                progress: totalProgress,
+                size: 68,
+                label: '${(totalProgress * 100).round()}%',
+                sublabel: '累计',
+                ringColor: AppColors.blue,
+                bgColor: AppColors.blueLight,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── 3 个次指标横排 ──────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            decoration: BoxDecoration(
+              color: AppColors.bgSection,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              children: [
+                _MiniStat(
+                  label: '日均摄入',
+                  value: avgDisplay,
+                  unit: avgUnit,
+                  color: AppColors.skyBright,
+                  icon: Icons.show_chart_rounded,
+                ),
+                _VertDivider(),
+                _MiniStat(
+                  label: '达标率',
+                  value: '$achieveRate',
+                  unit: '%',
+                  color: AppColors.green,
+                  icon: Icons.verified_rounded,
+                ),
+                _VertDivider(),
+                _MiniStat(
+                  label: '打卡天数',
+                  value: '$checkinDays',
+                  unit: '天',
+                  color: AppColors.orange,
+                  icon: Icons.local_fire_department_rounded,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── 柱状图标题 ──────────────────────────────────────────
+          Row(
+            children: [
+              const Text(
+                '每日摄入趋势',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _chartLegend(AppColors.blue, '达标'),
+              const SizedBox(width: 8),
+              _chartLegend(AppColors.greyLight, '未达标'),
+              const Spacer(),
+              Container(width: 14, height: 1.5, color: AppColors.orange),
+              const SizedBox(width: 4),
+              const Text(
+                '目标线',
+                style: TextStyle(fontSize: 10, color: AppColors.textHint),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // ── 柱状图 ──────────────────────────────────────────────
+          SizedBox(
+            height: 150,
+            child: BarChart(
+              BarChartData(
+                maxY: maxY,
+                minY: 0,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: goalMl.toDouble(),
+                  getDrawingHorizontalLine: (value) => const FlLine(
+                    color: AppColors.divider,
+                    strokeWidth: 0.8,
+                    dashArray: [4, 4],
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) =>
+                        AppColors.textPrimary.withValues(alpha: 0.88),
+                    tooltipRoundedRadius: 8,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final ml = rod.toY.toInt();
+                      if (ml == 0) return null;
+                      return BarTooltipItem(
+                        '${group.x}日\n',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: '$ml ml',
+                            style: const TextStyle(
+                              color: AppColors.skyBright,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: _leftTitleWidgets,
+                    ),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 16,
+                      getTitlesWidget: bottomTitleWidgets,
+                    ),
+                  ),
+                ),
+                extraLinesData: ExtraLinesData(
+                  horizontalLines: [
+                    HorizontalLine(
+                      y: goalMl.toDouble(),
+                      color: AppColors.orange,
+                      strokeWidth: 1.2,
+                      dashArray: [6, 4],
+                    ),
+                  ],
+                ),
+                barGroups: barGroups,
+                alignment: BarChartAlignment.spaceAround,
+              ),
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _leftTitleWidgets(double value, TitleMeta meta) {
+    if (value == meta.min || value == meta.max) {
+      return const SizedBox.shrink();
+    }
+    final label = value >= 1000
+        ? '${(value / 1000).toStringAsFixed(1)}L'
+        : '${value.toInt()}';
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 8, color: Color(0xFF6B9EC4)),
+      ),
+    );
+  }
+
+  Widget _chartLegend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 9, color: Color(0xFF6B9EC4)),
+        ),
+      ],
+    );
+  }
+
   Widget _legendDot(Color color, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -968,6 +1356,186 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ],
     );
+  }
+}
+
+// ── 本月统计卡片：辅助组件 ────────────────────────────────────────────────────
+
+/// 环形进度指示器（水波风格）
+class _WaterRing extends StatelessWidget {
+  const _WaterRing({
+    required this.progress,
+    required this.size,
+    required this.label,
+    required this.sublabel,
+    required this.ringColor,
+    required this.bgColor,
+  });
+
+  final double progress;
+  final double size;
+  final String label;
+  final String sublabel;
+  final Color ringColor;
+  final Color bgColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: size,
+            height: size,
+            child: CircularProgressIndicator(
+              value: progress,
+              strokeWidth: 5,
+              backgroundColor: bgColor,
+              valueColor: AlwaysStoppedAnimation<Color>(ringColor),
+              strokeCap: StrokeCap.round,
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                sublabel,
+                style: const TextStyle(fontSize: 9, color: AppColors.textHint),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 细进度条
+class _WaterProgressBar extends StatelessWidget {
+  const _WaterProgressBar({
+    required this.progress,
+    required this.color,
+    required this.bgColor,
+  });
+
+  final double progress;
+  final Color color;
+  final Color bgColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        return Container(
+          height: 4,
+          width: width,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progress.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.5),
+                    blurRadius: 4,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 横排次指标（日均摄入 / 达标率 / 打卡天数）
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final String unit;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2, left: 2),
+                child: Text(
+                  unit,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: AppColors.textHint),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 次指标间的竖向分割线
+class _VertDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 1, height: 48, color: AppColors.divider);
   }
 }
 

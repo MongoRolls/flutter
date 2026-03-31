@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import { auth } from '../middleware/auth.js';
-import { friendLookupRateLimit } from '../middleware/rate-limit.js';
+import { joinChallengeRateLimit } from '../middleware/rate-limit.js';
 import { validate } from '../middleware/validate.js';
 import * as ChallengesService from '../services/challenges.service.js';
 import type { AuthenticatedRequest } from '../types/index.js';
@@ -96,7 +96,7 @@ router.post('/', auth, validate(createSchema), async (req, res, next) => {
 router.post(
   '/join',
   auth,
-  friendLookupRateLimit,
+  joinChallengeRateLimit,
   validate(joinSchema),
   async (req, res, next) => {
     try {

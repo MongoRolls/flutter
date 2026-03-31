@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +9,7 @@ import '../../../core/services/backend_api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/backend_api_error_message.dart';
 import '../models/care_contact.dart';
+import '../widgets/add_friend_push_invite_sheet.dart';
 
 /// 添加队友页面（好友短码、关系、备注、头像）
 class AddContactScreen extends StatefulWidget {
@@ -16,18 +19,79 @@ class AddContactScreen extends StatefulWidget {
   State<AddContactScreen> createState() => _AddContactScreenState();
 }
 
+/// 将输入转为大写，与后端好友短码展示一致。
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}
+
 class _AddContactScreenState extends State<AddContactScreen> {
   final _friendCodeController = TextEditingController();
   final _nameController = TextEditingController();
   String _relationship = 'friend';
   String _avatarEmoji = '😊';
   bool _isSaving = false;
+  Timer? _prefetchDebounce;
+  String? _prefetchedNickname;
+  String? _prefetchError;
 
   static const _emojiOptions = ['😊', '👩', '👨', '🧡', '👧', '👦', '🧓', '👴'];
   static const _relationshipOptions = [('family', '家人'), ('friend', '朋友')];
 
   @override
+  void initState() {
+    super.initState();
+    _friendCodeController.addListener(_onFriendCodeChanged);
+  }
+
+  void _onFriendCodeChanged() {
+    _prefetchDebounce?.cancel();
+    final code = _normalizeFriendCodeInput(_friendCodeController.text);
+    if (code.length != 6) {
+      if (_prefetchedNickname != null || _prefetchError != null) {
+        setState(() {
+          _prefetchedNickname = null;
+          _prefetchError = null;
+        });
+      }
+      return;
+    }
+    _prefetchDebounce = Timer(const Duration(milliseconds: 350), () {
+      _prefetchLookup(code);
+    });
+  }
+
+  Future<void> _prefetchLookup(String code) async {
+    try {
+      final lookup = await BackendApiService.instance.lookupFriendCode(code);
+      if (!mounted) return;
+      final nick = (lookup['nickname'] as String?)?.trim();
+      setState(() {
+        _prefetchedNickname =
+            (nick != null && nick.isNotEmpty) ? nick : '水友';
+        _prefetchError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _prefetchedNickname = null;
+        _prefetchError = careLookupFriendCodeErrorMessage(e);
+      });
+    }
+  }
+
+  @override
   void dispose() {
+    _prefetchDebounce?.cancel();
+    _friendCodeController.removeListener(_onFriendCodeChanged);
     _friendCodeController.dispose();
     _nameController.dispose();
     super.dispose();
@@ -40,27 +104,48 @@ class _AddContactScreenState extends State<AddContactScreen> {
     return '水友';
   }
 
+  /// 与后端 `care.service` 的 `normalizeFriendCode` 一致（去空格、大写）。
+  static String _normalizeFriendCodeInput(String raw) {
+    return raw.trim().replaceAll(' ', '').toUpperCase();
+  }
+
   Future<void> _save() async {
-    final code = _friendCodeController.text.trim().toUpperCase();
+    final code = _normalizeFriendCodeInput(_friendCodeController.text);
     final remark = _nameController.text.trim();
     if (code.isEmpty) {
       AppToast.error(context, '请输入好友短码');
       return;
     }
+    if (code.length != 6) {
+      AppToast.error(
+        context,
+        '好友短码须为 6 位（字母 A–Z，数字 2–9，不含 0/1；新码不含易混的 I/O）',
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
+    final backend = BackendApiService.instance;
+    Map<String, dynamic> lookup;
     try {
-      final backend = BackendApiService.instance;
-      final lookup = await backend.lookupFriendCode(code);
-      final contactId = lookup['userId'] as String;
-      final nickname = _resolveNickname(remark, lookup);
+      lookup = await backend.lookupFriendCode(code);
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.error(context, careLookupFriendCodeErrorMessage(e));
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    final contactId = lookup['userId'] as String;
+    final nickname = _resolveNickname(remark, lookup);
+    try {
       final resp = await backend.createCareContact(
         contactId: contactId,
         nickname: nickname,
       );
       final rowId = resp['id'] as String?;
 
-      final contact = CareContact(
+      var contact = CareContact(
         id: contactId,
         name: nickname,
         serverRowId: rowId,
@@ -68,11 +153,17 @@ class _AddContactScreenState extends State<AddContactScreen> {
         avatarEmoji: _avatarEmoji,
       );
       if (!mounted) return;
+      final invite = await showFriendPushInviteSheet(
+        context: context,
+        friendDisplayName: nickname,
+      );
+      if (!mounted) return;
+      final enabled = invite ?? false;
+      contact = contact.copyWith(friendPushInviteEnabled: enabled);
       Navigator.of(context).pop(contact);
     } catch (e) {
       if (!mounted) return;
-      final msg = backendApiErrorMessage(e);
-      AppToast.error(context, msg);
+      AppToast.error(context, careCreateContactErrorMessage(e));
       setState(() => _isSaving = false);
     }
   }
@@ -113,9 +204,14 @@ class _AddContactScreenState extends State<AddContactScreen> {
           TextField(
             controller: _friendCodeController,
             textCapitalization: TextCapitalization.characters,
-            maxLength: 12,
+            maxLength: 6,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp('[A-Za-z2-9]')),
+              _UpperCaseTextFormatter(),
+              LengthLimitingTextInputFormatter(6),
+            ],
             decoration: InputDecoration(
-              hintText: '输入好友短码（例如 AB3K9Q）',
+              hintText: '6 位（不含 0/1；新码不含 I/O）',
               counterText: '',
               filled: true,
               fillColor: AppColors.white,
@@ -133,6 +229,27 @@ class _AddContactScreenState extends State<AddContactScreen> {
               ),
             ),
           ),
+          if (_prefetchError != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _prefetchError!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ] else if (_prefetchedNickname != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '已识别对方：$_prefetchedNickname',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.blue,
+                height: 1.35,
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
 
           // 关系
@@ -351,13 +468,15 @@ class _MyFriendCodeSheetState extends State<_MyFriendCodeSheet> {
             ),
           )
         else
-          SelectableText(
-            _friendCode,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 2,
-              color: AppColors.textPrimary,
+          SelectionArea(
+            child: Text(
+              _friendCode,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
         const SizedBox(height: 20),

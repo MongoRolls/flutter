@@ -3,14 +3,20 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../community/providers/heart_provider.dart';
 import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../services/debug_service.dart';
 
 class DebugScreen extends StatefulWidget {
   final UserProvider userProvider;
+  final HeartProvider heartProvider;
 
-  const DebugScreen({super.key, required this.userProvider});
+  const DebugScreen({
+    super.key,
+    required this.userProvider,
+    required this.heartProvider,
+  });
 
   @override
   State<DebugScreen> createState() => _DebugScreenState();
@@ -39,6 +45,7 @@ class _DebugScreenState extends State<DebugScreen> {
                   _buildDeviceInfoSection(),
                   _buildNotificationsSection(),
                   _buildProviderSection(),
+                  _buildCommunitySection(),
                   _buildSyncSection(),
                   _buildPersistenceSection(),
                   const SizedBox(height: 20),
@@ -423,6 +430,26 @@ class _DebugScreenState extends State<DebugScreen> {
           ),
           const SizedBox(height: 8),
           _actionRow(
+            label: '注入本月 Mock 数据',
+            icon: Icons.bar_chart_outlined,
+            color: AppColors.purple,
+            onTap: () => _runTest(
+              '注入 Mock 月度数据',
+              () => DebugService.instance.injectMockMonthlyData(_p),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _actionRow(
+            label: '插入完整测试数据',
+            icon: Icons.person_add_alt_outlined,
+            color: AppColors.skyBright,
+            onTap: () => _runTest(
+              '插入完整测试数据',
+              () => DebugService.instance.injectFullDemoTestData(_p),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _actionRow(
             label: '清空今日饮水',
             icon: Icons.delete_outline,
             color: AppColors.textPrimary,
@@ -431,6 +458,61 @@ class _DebugScreenState extends State<DebugScreen> {
               '清空今日饮水',
               '确认清空今日所有饮水记录？',
               () => DebugService.instance.resetTodayIntake(_p),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommunitySection() {
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle('💝', '社区 / 好友'),
+          const SizedBox(height: 12),
+          _actionRow(
+            label: '查看 peers hydration 原始响应',
+            icon: Icons.cloud_download_outlined,
+            color: AppColors.blue,
+            onTap: () => _runTest(
+              'Peers hydration 原始响应',
+              () => DebugService.instance.inspectPeersHydrationRaw(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _actionRow(
+            label: '查看 care/contacts 原始响应',
+            icon: Icons.contact_page_outlined,
+            color: AppColors.blueDark,
+            onTap: () => _runTest(
+              'Care contacts 原始响应',
+              () => DebugService.instance.inspectCareContactsRaw(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _actionRow(
+            label: '查看好友缓存（mockTodayMl）',
+            icon: Icons.people_outline,
+            color: AppColors.purple,
+            onTap: () {
+              final result = DebugService.instance.inspectHeartContactsState(
+                widget.heartProvider,
+              );
+              setState(() => _results.insert(0, result));
+            },
+          ),
+          const SizedBox(height: 8),
+          _actionRow(
+            label: '刷新好友饮水摘要',
+            icon: Icons.refresh,
+            color: AppColors.green,
+            onTap: () => _runTest(
+              '刷新好友饮水摘要',
+              () => DebugService.instance.refreshHeartPeersHydration(
+                widget.heartProvider,
+              ),
             ),
           ),
         ],

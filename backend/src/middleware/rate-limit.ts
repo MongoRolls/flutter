@@ -45,6 +45,22 @@ const friendLookupPerIpLimiter = new RateLimiterRedis({
   duration: 60,
 });
 
+/** 挑战加入：与好友码查询限流解耦（B4） */
+const joinChallengeLimiter = new RateLimiterRedis({
+  storeClient: redis,
+  keyPrefix: 'rl_join_challenge',
+  points: 20,
+  duration: 60,
+});
+
+/** 向同一关怀对象发提醒：每对关系每小时最多 N 次（B3） */
+const peerRemindLimiter = new RateLimiterRedis({
+  storeClient: redis,
+  keyPrefix: 'rl_peer_remind_pair',
+  points: 5,
+  duration: 3600,
+});
+
 function msBeforeNextFromRejection(rej: unknown): number {
   if (
     typeof rej === 'object' &&
@@ -90,6 +106,39 @@ export const authRateLimit = createRateLimitMiddleware(
 );
 
 // 需放在 auth 之后使用（依赖 userId）；两桶都 consume 成功才放行
+/** 需 auth；按用户 id 限流（与好友码查询独立） */
+export const joinChallengeRateLimit = createRateLimitMiddleware(
+  joinChallengeLimiter,
+  (req) => (req as AuthenticatedRequest).user?.id ?? req.ip ?? 'unknown',
+);
+
+/**
+ * POST /api/care/remind 专用：需 auth + validate（解析 body）之后挂载。
+ * key = ownerId + contactId，避免对同一人狂刷提醒。
+ */
+export async function peerRemindRateLimit(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const userId = (req as AuthenticatedRequest).user?.id;
+  const contactId = (req.body as { contactId?: string })?.contactId;
+  if (!userId || !contactId) {
+    next();
+    return;
+  }
+  const key = `${userId}:${contactId}`;
+  try {
+    const result = await peerRemindLimiter.consume(key);
+    res.setHeader('X-RateLimit-Remaining', result.remainingPoints);
+    next();
+  } catch (rej: unknown) {
+    const ms = msBeforeNextFromRejection(rej);
+    res.setHeader('Retry-After', String(Math.max(1, Math.ceil(ms / 1000))));
+    next(new TooManyRequestsError());
+  }
+}
+
 export async function friendLookupRateLimit(
   req: Request,
   res: Response,

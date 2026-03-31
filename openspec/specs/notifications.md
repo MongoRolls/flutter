@@ -1,6 +1,6 @@
 # 规格：通知系统
 
-> 领域：flutter · 版本：1.0.0 · 最后更新：2026-03-27
+> 领域：flutter · 版本：1.1.0 · 最后更新：2026-04-01
 
 ## 概述
 
@@ -9,7 +9,7 @@
 2. **自定义提醒**：由 AI 或用户手动设置的一次性/周期性提醒
 3. **关怀通知**：社区功能中向关怀联系人发出"喝水了吗"即时通知
 
-所有通知均为本地通知，无需网络，不依赖推送服务。
+定期/自定义/部分关怀提醒为本地调度；**好友心连心提醒**在接收端展示时使用独立渠道（`NotificationService.showPeerCareNotification`）。远端推送到对方设备依赖后续 FCM/APNs 集成。
 
 ---
 
@@ -86,14 +86,24 @@
 
 ---
 
-### REQ-NOTIF-04：关怀通知
+### REQ-NOTIF-04：关怀通知（心连心 / 好友模板）
 
-**场景 1：发送关怀通知**
-- Given 用户在社区页对关怀联系人发出"喝水了吗"提醒
-- When `HeartProvider.sendCare(contact)` 被调用
-- Then `NotificationService.showCareNotification(title, body)` 立即弹出本地通知
+**场景 1：独立渠道**
+- Given 应用已初始化 `NotificationService`
+- When 需要展示**好友发来**的心连心提醒（本地模拟或推送回调）
+- Then 使用与普通「定时喝水提醒」**不同**的 Android `NotificationChannel`（如 `keleme_peer_care`）；iOS/macOS 使用独立 `categoryIdentifier`（如 `keleme_peer_care`），不得复用 `keleme_water_reminder` 渠道
 
-> 注：当前关怀通知为本地通知（仅在发送方设备上显示），联系人接收功能为未来规划。
+**场景 2：文案**
+- Given 展示好友模板提醒
+- When 系统弹出通知
+- Then 标题须能识别发送方（昵称或「好友提醒」类文案），正文为所选模板摘要
+
+**场景 3：调试**
+- Given 开发环境调用 `showPeerCareNotification(title, body)`
+- When 展示通知
+- Then 仍须走心连心渠道配置（在平台支持按通知指定 channel 的前提下）
+
+> 注：发送方点击「发送」后，对方设备是否立即收到取决于远端推送是否已接入；未接入时服务端仍持久化 `POST /api/care/remind`。
 
 ---
 
@@ -104,7 +114,7 @@
 | 0 - 999     | 定期水提醒（7天 × N个/天）|
 | 1000 - 1019 | 计划 Slot 提醒      |
 | 2000+       | AI 自定义提醒       |
-| 9000+       | 关怀通知            |
+| 9000+       | 关怀 / 心连心好友模板提醒（可与旧版关怀 ID 并存时划分子段） |
 
 ---
 
@@ -136,6 +146,6 @@
 ## 客户端实现路径
 
 - **NotificationService**：`flutter/lib/core/services/notification_service.dart`
-  - `init()`, `requestPermission()`, `scheduleReminders()`, `scheduleCustomReminder()`, `cancelPlanReminders()`, `showCareNotification()`
+  - `init()`, `requestPermission()`, `scheduleReminders()`, `scheduleCustomReminder()`, `cancelPlanReminders()`, `showPeerCareNotification()`
 - **CustomReminder 模型**：`flutter/lib/core/models/custom_reminder.dart`
-- **调用方**：`UserProvider.saveProfile()`, `PlanProvider.scheduleSlotReminders()`, `HeartProvider.sendCare()`
+- **调用方**：`UserProvider.saveProfile()`, `PlanProvider.scheduleSlotReminders()`；心连心接收展示由推送或本地调试调用 `showPeerCareNotification`

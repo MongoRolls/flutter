@@ -10,7 +10,7 @@ interface DateFilter {
 }
 
 // 构建日期过滤条件，支持客户端传入时区偏移（分钟）
-function buildDateFilter(
+export function buildDateFilter(
   date?: string,
   startDate?: string,
   endDate?: string,
@@ -32,6 +32,21 @@ function buildDateFilter(
   }
 
   return undefined;
+}
+
+/** 某日用户饮水毫升合计（与 queryLogs 聚合逻辑一致） */
+export async function sumMlForUserOnDate(
+  userId: string,
+  date: string,
+  tzOffsetMin: number,
+): Promise<number> {
+  const dateFilter = buildDateFilter(date, undefined, undefined, tzOffsetMin);
+  if (!dateFilter) return 0;
+  const agg = await prisma.drinkLog.aggregate({
+    where: { userId, loggedAt: dateFilter },
+    _sum: { ml: true },
+  });
+  return agg._sum.ml ?? 0;
 }
 
 export async function queryLogs(

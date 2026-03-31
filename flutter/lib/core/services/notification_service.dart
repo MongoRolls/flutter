@@ -3,8 +3,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../constants/peer_remind_templates.dart';
 
 /// 本地通知（喝水 / 自定义 / 心连心等）。
 ///
@@ -20,6 +23,14 @@ class NotificationService {
   static const _channelId = 'keleme_water_reminder';
   static const _channelName = '喝水提醒';
   static const _channelDesc = '定时提醒你喝水';
+
+  /// 在社区 Tab 有队友时写入：本地定时喝水提醒改用 [kPeerRemindBodiesForNotifications]。
+  static const waterRemindersUsePeerCopyPrefKey = 'water_reminders_use_peer_copy';
+
+  /// 与普通日程喝水提醒分离：好友「心连心」模板提醒（接收端展示用）
+  static const _peerCareChannelId = 'keleme_peer_care';
+  static const _peerCareChannelName = '心连心好友提醒';
+  static const _peerCareChannelDesc = '好友向你发送的喝水提醒';
 
   static const List<String> _gentleMessages = [
     '该喝水啦，来一杯温水吧 ~',
@@ -67,6 +78,56 @@ class NotificationService {
     );
 
     await _plugin.initialize(settings: initSettings);
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _peerCareChannelId,
+          _peerCareChannelName,
+          description: _peerCareChannelDesc,
+          importance: Importance.high,
+        ),
+      );
+    }
+  }
+
+  /// 展示好友发来的心连心提醒（与 [scheduleReminders] 所用渠道不同）。
+  /// 远端推送接入后由推送处理器调用；模板正文与 `POST /api/care/remind` 一致。
+  Future<void> showPeerCareNotification({
+    required String title,
+    required String body,
+  }) async {
+    final id = 9000 + Random().nextInt(100);
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _peerCareChannelId,
+          _peerCareChannelName,
+          channelDescription: _peerCareChannelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          categoryIdentifier: 'keleme_peer_care',
+        ),
+        macOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          categoryIdentifier: 'keleme_peer_care',
+        ),
+      ),
+    );
   }
 
   Future<bool> requestPermission() async {
@@ -113,8 +174,13 @@ class NotificationService {
     required String bedTime,
     required int intervalMin,
     String reminderStyle = '温柔',
+    /// 为 null 时读 [SharedPreferences]（社区有队友且进入过社区 Tab 后为 true）。
+    bool? usePeerRemindBodies,
   }) async {
     await cancelAll();
+
+    // 间隔为 0 会导致 while 循环无法前进，卡死应用启动（见 main.dart 调度）
+    final stepMin = intervalMin <= 0 ? 90 : intervalMin;
 
     final now = tz.TZDateTime.now(tz.local);
     final wakeParts = wakeTime.split(':');
@@ -124,11 +190,18 @@ class NotificationService {
     final bedHour = int.parse(bedParts[0]);
     final bedMinute = int.parse(bedParts[1]);
 
-    final messages = switch (reminderStyle) {
-      '活泼' => _livelyMessages,
-      '严肃' => _seriousMessages,
-      _ => _gentleMessages,
-    };
+    final usePeer = usePeerRemindBodies ??
+        (await SharedPreferences.getInstance())
+            .getBool(waterRemindersUsePeerCopyPrefKey) ??
+        false;
+
+    final List<String> messages = usePeer
+        ? kPeerRemindBodiesForNotifications
+        : switch (reminderStyle) {
+            '活泼' => _livelyMessages,
+            '严肃' => _seriousMessages,
+            _ => _gentleMessages,
+          };
 
     final rng = Random();
     var id = 0;
@@ -185,7 +258,7 @@ class NotificationService {
           );
           id++;
         }
-        current = current.add(Duration(minutes: intervalMin));
+        current = current.add(Duration(minutes: stepMin));
       }
     }
 

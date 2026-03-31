@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -7,6 +9,7 @@ import 'core/models/session_summary.dart';
 import 'core/models/custom_reminder.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/user_provider.dart';
+import 'features/community/providers/heart_provider.dart';
 import 'core/services/backend_api_service.dart';
 import 'core/services/notification_service.dart';
 import 'features/plan/models/today_plan.dart';
@@ -28,7 +31,9 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      // 浅色主背景：深色状态栏图标（勿用 Brightness.light，否则图标几乎不可见）
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
     ),
   );
   runApp(const KeLeMeApp());
@@ -43,7 +48,14 @@ class KeLeMeApp extends StatefulWidget {
 
 class _KeLeMeAppState extends State<KeLeMeApp> {
   final _userProvider = UserProvider();
+  final _heartProvider = HeartProvider();
   bool _isLoading = true;
+
+  @override
+  void dispose() {
+    _heartProvider.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -63,22 +75,30 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
         debugPrint('Backend auth failed (offline mode): $e');
       }
       await _userProvider.loadProfile();
-      // 已完成 onboarding 且开启通知的用户，启动时重新调度
-      if (_userProvider.profile.onboardingCompleted &&
-          _userProvider.profile.notificationsEnabled) {
-        await NotificationService.instance.scheduleReminders(
-          wakeTime: _userProvider.profile.wakeTime,
-          bedTime: _userProvider.profile.bedTime,
-          intervalMin: _userProvider.profile.reminderIntervalMin,
-          reminderStyle: _userProvider.profile.reminderStyle,
-        );
-      }
     } catch (e) {
       debugPrint('Init error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+    // 首屏显示后再调度通知，避免 [scheduleReminders] 异常或间隔为 0 时卡死启动
+    if (_userProvider.profile.onboardingCompleted &&
+        _userProvider.profile.notificationsEnabled) {
+      unawaited(_scheduleStartupReminders());
+    }
+  }
+
+  Future<void> _scheduleStartupReminders() async {
+    try {
+      await NotificationService.instance.scheduleReminders(
+        wakeTime: _userProvider.profile.wakeTime,
+        bedTime: _userProvider.profile.bedTime,
+        intervalMin: _userProvider.profile.reminderIntervalMin,
+        reminderStyle: _userProvider.profile.reminderStyle,
+      );
+    } catch (e) {
+      debugPrint('Startup scheduleReminders failed: $e');
     }
   }
 
@@ -96,12 +116,21 @@ class _KeLeMeAppState extends State<KeLeMeApp> {
               ),
             )
           : _userProvider.profile.onboardingCompleted
-          ? MainShell(userProvider: _userProvider)
+          ? MainShell(
+              userProvider: _userProvider,
+              heartProvider: _heartProvider,
+            )
           : OnboardingScreen(userProvider: _userProvider),
       routes: {
         '/onboarding': (_) => OnboardingScreen(userProvider: _userProvider),
-        '/home': (_) => MainShell(userProvider: _userProvider),
-        '/debug': (_) => DebugScreen(userProvider: _userProvider),
+        '/home': (_) => MainShell(
+              userProvider: _userProvider,
+              heartProvider: _heartProvider,
+            ),
+        '/debug': (_) => DebugScreen(
+              userProvider: _userProvider,
+              heartProvider: _heartProvider,
+            ),
       },
     );
   }

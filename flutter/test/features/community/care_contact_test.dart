@@ -25,4 +25,16 @@ void main() {
     });
     expect(c.serverRowId, isNull);
   });
+
+  test('CareContact friendPushInviteEnabled round-trip', () {
+    final c = CareContact(
+      id: 'u1',
+      name: '水友',
+      relationship: 'friend',
+      avatarEmoji: '😊',
+      friendPushInviteEnabled: true,
+    );
+    final back = CareContact.fromMap(c.toMap());
+    expect(back.friendPushInviteEnabled, isTrue);
+  });
 }

@@ -1,4 +1,0 @@
--- This migration is intentionally left as no-op.
--- Reason: the original timestamp order was earlier than init migration,
--- which caused shadow database validation failure.
--- Equivalent schema changes are merged into the init migration.

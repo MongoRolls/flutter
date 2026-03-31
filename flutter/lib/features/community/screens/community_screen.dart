@@ -1,17 +1,20 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../common/widgets/app_toast.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../../core/utils/backend_api_error_message.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/care_contact.dart';
 import '../providers/heart_provider.dart';
 import '../providers/plaza_provider.dart';
 import '../widgets/care_contact_card.dart';
 import '../widgets/challenge_card.dart';
+import '../widgets/peer_remind_template_sheet.dart';
 import '../widgets/streak_display.dart';
 import 'add_contact_screen.dart';
 
@@ -65,7 +68,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<void> _onRefresh() async {
-    await widget.plazaProvider.refresh();
+    // [HeartProvider.load] 会在拉取联系人后合并 peers/hydration
+    await Future.wait([
+      widget.plazaProvider.refresh(),
+      widget.heartProvider.load(),
+    ]);
   }
 
   Future<void> _addContact() async {
@@ -81,12 +88,62 @@ class _CommunityScreenState extends State<CommunityScreen> {
       return;
     }
     if (!mounted) return;
-    AppToast.success(context, '添加成功');
+    AppToast.success(
+      context,
+      result.friendPushInviteEnabled ? '添加成功，已发送提醒邀请' : '添加成功',
+    );
+  }
+
+  Future<void> _remindPeerTemplate(CareContact contact) async {
+    await showPeerRemindTemplateSheet(
+      context: context,
+      peerDisplayName: contact.name,
+      contactUserId: contact.id,
+    );
   }
 
   Future<void> _removeContact(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('移除队友'),
+        content: const Text('确定要移除这位关怀联系人吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('移除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await widget.heartProvider.removeContact(id);
+      if (!mounted) return;
+      if (widget.heartProvider.contacts.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(
+          NotificationService.waterRemindersUsePeerCopyPrefKey,
+          false,
+        );
+        if (mounted &&
+            widget.userProvider.profile.notificationsEnabled) {
+          try {
+            await NotificationService.instance.scheduleReminders(
+              wakeTime: widget.userProvider.profile.wakeTime,
+              bedTime: widget.userProvider.profile.bedTime,
+              intervalMin: widget.userProvider.profile.reminderIntervalMin,
+              reminderStyle: widget.userProvider.profile.reminderStyle,
+            );
+          } catch (e) {
+            debugPrint('removeContact reschedule reminders failed: $e');
+          }
+        }
+      }
       if (!mounted) return;
       AppToast.info(context, '已移除队友');
     } catch (e) {
@@ -291,8 +348,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_isLoaded) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.blue),
+      return const Scaffold(
+        backgroundColor: AppColors.bgMain,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.blue),
+        ),
       );
     }
     return Scaffold(
@@ -475,66 +535,112 @@ class _CommunityScreenState extends State<CommunityScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const _CommunitySectionTitle(
-              icon: Icons.group_rounded,
-              iconColor: AppColors.blueDark,
+              icon: Icons.favorite_rounded,
+              iconColor: AppColors.blue,
               iconBackground: AppColors.blueLight,
-              title: '我的队友',
-              subtitle: '通过好友短码添加，互相提醒喝水',
+              title: '心连心',
+              subtitle: '守护每一口温暖 · 好友短码添加',
             ),
+            // TODO: 未读关怀/提醒角标或顶栏提示（触发条件待产品定）
             const SizedBox(height: 14),
             if (contacts.isEmpty)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+                padding: EdgeInsets.symmetric(vertical: 8),
                 child: _CommunityEmptyHint(
-                  icon: Icons.person_add_alt_1_rounded,
-                  title: '还没有队友',
-                  message: '点击下方添加，输入好友短码即可关联',
+                  icon: Icons.group_outlined,
+                  title: '还没有关怀的人',
+                  message: '点击下方添加队友，输入 6 位好友短码',
                   compact: true,
                 ),
               )
             else
               ...contacts.map(
                 (c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 10),
                   child: CareContactCard(
                     contact: c,
+                    onRemindPeer: () => _remindPeerTemplate(c),
                     onRemove: () => _removeContact(c.id),
                   ),
                 ),
               ),
-            const SizedBox(height: 8),
-            Material(
-              color: AppColors.blueLight.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              child: InkWell(
-                onTap: _addContact,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add_rounded,
-                        size: 18,
-                        color: AppColors.blueDark,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '添加队友',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.blueDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            if (contacts.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              _CareAiTipCard(contactCount: contacts.length),
+            ],
+            const SizedBox(height: 10),
+            _CareAddTeammateButton(onTap: _addContact),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 与社区页「创建挑战」等一致的描边主色按钮；`onTap` 仍为添加页 + 弹窗流程
+class _CareAddTeammateButton extends StatelessWidget {
+  const _CareAddTeammateButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: const Text('添加队友'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.blueDark,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: const BorderSide(color: AppColors.blueBorder),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CareAiTipCard extends StatelessWidget {
+  const _CareAiTipCard({required this.contactCount});
+
+  final int contactCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: AppColors.blueLight.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.blueBorder.withValues(alpha: 0.65)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.tips_and_updates_outlined,
+            size: 20,
+            color: AppColors.blueDark.withValues(alpha: 0.9),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'AI 温馨提示：你已添加 $contactCount 位关怀对象；'
+              '已登录时，卡片上的今日饮水与百分比会与对方服务器数据同步。'
+              '适合在固定时段发送提醒，更容易被接受哦～',
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

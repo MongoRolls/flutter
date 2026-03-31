@@ -172,7 +172,12 @@ npm run db:studio
 
 # 重置数据库（删除所有数据并重新执行迁移）
 npm run db:reset
+
+# 写入「测试好友」种子数据（固定好友码，便于联调社区 / 添加队友）
+npm run db:seed
 ```
+
+Prisma ORM 7 下 **`db:seed` 需手动执行**（`migrate reset` 不会自动跑种子）。迁移完成后执行一次 `npm run db:seed` 即可。详见仓库 [.cursor/project/测试好友码.md](../.cursor/project/测试好友码.md)。
 
 ### 数据模型
 
@@ -203,6 +208,7 @@ npm run db:reset
 | `npm run db:generate` | 重新生成 Prisma Client                   |
 | `npm run db:studio`   | 启动 Prisma Studio (可视化数据库管理)     |
 | `npm run db:reset`    | 重置数据库                               |
+| `npm run db:seed`     | 写入测试好友（固定好友码 `KELE22`）      |
 | `npm run deploy:prod` | 生产更新（`npm ci`、迁移、构建、`pm2 reload`） |
 | `npm run deploy:prod:pull` | 同上且先执行 `git pull` |
 | `npm run deploy:podman` | Podman Compose 全栈：`up -d` + `prisma migrate deploy` |
@@ -803,5 +809,7 @@ npm run db:migrate
 | Phase 4 | 数据 CRUD（DrinkLog + Profile + Memory + Plan + Session + Care） | ✅ 已完成 |
 | Phase 5 | 同步（Push / Pull + 冲突解决 + Flutter 同步队列） | 🔲 待开发 |
 | Phase 6 | 社区（真实社交关系 + 排行榜 + FCM 推送） | 🔲 待开发 |
+
+`POST /api/care/remind` 已写入 `CareReminder` 表；**FCM/APNs 推送到对方设备**仍属 Phase 6，当前不会在发送后自动触达对方手机（客户端需后续接入推送再调用展示逻辑）。
 
 前后端协作与现状摘要见仓库根目录 `.cursor/project/README.md`。

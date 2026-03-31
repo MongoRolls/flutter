@@ -9,7 +9,7 @@ WEB_PUBLIC="$(cd "$ROOT/../web/public" && pwd)"
 echo "==> macOS Release + zip"
 flutter build macos --release
 ditto -c -k --keepParent \
-  "$ROOT/build/macos/Build/Products/Release/ke_le_me.app" \
+  "$ROOT/build/macos/Build/Products/Release/渴了么.app" \
   "$WEB_PUBLIC/ke-le-me-macos.zip"
 
 echo "==> Android Release（仅 arm64-v8a，体积较小）"

@@ -10,7 +10,8 @@ const envSchema = z.object({
   DEEPSEEK_API_KEY: z.string().startsWith('sk-'),
   CORS_ORIGIN: z.string().default('*'),
   // 限流配置（好友短码查询）
-  RATE_LIMIT_FRIEND_LOOKUP_USER_PER_MIN: z.coerce.number().default(12),
+  // 好友短码查询（防枚举）；开发/连点「添加」时过严易 429，默认略高于「每分钟 1 次尝试」
+  RATE_LIMIT_FRIEND_LOOKUP_USER_PER_MIN: z.coerce.number().default(30),
   RATE_LIMIT_FRIEND_LOOKUP_IP_PER_MIN: z.coerce.number().default(40),
 });
 

@@ -19,9 +19,8 @@ model User {
 
   profile      UserProfile?
   drinkLogs    DrinkLog[]
-  memoryFacts  MemoryFact[]
-  sessions     SessionSummary[]
-  plans        TodayPlan[]
+  careRemindersSent     CareReminder[] @relation("careReminderOwner")
+  careRemindersReceived CareReminder[] @relation("careReminderContact")
   careContacts CareContact[]   @relation("owner")
   caredBy      CareContact[]   @relation("contact")
   challenges   ChallengeMember[]
@@ -42,6 +41,8 @@ model UserProfile {
   notificationsEnabled Boolean  @default(true)
   weightKg             Float?
   activityLevel        String?
+  /// 是否向关怀好友展示饮水毫升摘要（默认展示）
+  shareHydrationWithCareContacts Boolean @default(true)
   updatedAt            DateTime @updatedAt
 }
 
@@ -58,41 +59,6 @@ model DrinkLog {
   @@index([userId, loggedAt])
 }
 
-model MemoryFact {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category  String
-  content   String
-  source    String   @default("chat")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-}
-
-model SessionSummary {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  summary   String
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
-model TodayPlan {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime @db.Date
-  planJson  Json
-  createdAt DateTime @default(now())
-
-  @@unique([userId, date])
-  @@index([userId])
-}
-
 model CareContact {
   id        String   @id @default(cuid())
   ownerId   String
@@ -105,6 +71,20 @@ model CareContact {
   @@unique([ownerId, contactId])
   @@index([ownerId])
   @@index([contactId])
+}
+
+/// 关怀好友「提醒喝水」发送记录（远端推送为阶段二，此处先持久化）
+model CareReminder {
+  id         String   @id @default(cuid())
+  ownerId    String
+  owner      User     @relation("careReminderOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  contactId  String
+  contact    User     @relation("careReminderContact", fields: [contactId], references: [id], onDelete: Cascade)
+  templateId Int
+  createdAt  DateTime @default(now())
+
+  @@index([ownerId])
+  @@index([contactId, createdAt])
 }
 
 model Challenge {

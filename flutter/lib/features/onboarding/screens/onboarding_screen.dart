@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../common/widgets/scroll_wheel_time_picker.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/wake_bed_time.dart';
 import '../../../core/models/user_profile.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
@@ -425,7 +427,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text('提醒计划', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 4),
           Text('设置作息时间和提醒频率', style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 28),
+          const SizedBox(height: 8),
+          const Text(
+            '同一天内起床时间须早于就寝时间，以便在清醒时段提醒喝水',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint, height: 1.35),
+          ),
+          const SizedBox(height: 20),
 
           GlassCard(
             child: Column(
@@ -435,7 +442,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 8),
                 _timePickerButton(
                   _wakeTime,
-                  (t) => setState(() => _wakeTime = t),
+                  _onWakeTimePicked,
                 ),
 
                 const SizedBox(height: 20),
@@ -443,7 +450,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 8),
                 _timePickerButton(
                   _bedTime,
-                  (t) => setState(() => _bedTime = t),
+                  _onBedTimePicked,
                 ),
 
                 const SizedBox(height: 20),
@@ -459,6 +466,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
 
+          const SizedBox(height: 12),
           GlassCard(
             child: Row(
               children: [
@@ -638,56 +646,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  /// 与 [NotificationService.scheduleReminders] 一致：同一天内起床时间须早于就寝时间。
+  void _onWakeTimePicked(String t) {
+    final r = WakeBedTime.afterWakePick(newWakeHhMm: t, bedHhMm: _bedTime);
+    setState(() {
+      _wakeTime = r.wake;
+      _bedTime = r.bed;
+    });
+    if (r.snackMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(r.snackMessage!),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _onBedTimePicked(String t) {
+    final r = WakeBedTime.afterBedPick(wakeHhMm: _wakeTime, newBedHhMm: t);
+    setState(() {
+      _wakeTime = r.wake;
+      _bedTime = r.bed;
+    });
+    if (r.snackMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(r.snackMessage!),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Widget _timePickerButton(String time, ValueChanged<String> onChanged) {
     return GestureDetector(
       onTap: () async {
-        final parts = time.split(':');
-        final picked = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay(
-            hour: int.parse(parts[0]),
-            minute: int.parse(parts[1]),
-          ),
-          initialEntryMode: TimePickerEntryMode.inputOnly,
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.dark(
-                primary: AppColors.blue,
-                onPrimary: Colors.white,
-                surface: AppColors.bgSection,
-                onSurface: AppColors.textPrimary,
-              ),
-              timePickerTheme: TimePickerThemeData(
-                backgroundColor: AppColors.bgCard,
-                hourMinuteShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                dayPeriodBorderSide: const BorderSide(color: AppColors.divider),
-                inputDecorationTheme: InputDecorationTheme(
-                  filled: true,
-                  fillColor: AppColors.bgSection,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.divider),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: AppColors.blue,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            child: child!,
-          ),
+        await showScrollWheelTimePicker(
+          context,
+          initialHhMm: time,
+          onConfirm: onChanged,
         );
-        if (picked != null) {
-          onChanged(
-            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}',
-          );
-        }
+        if (!mounted) return;
       },
       child: Container(
         width: double.infinity,
@@ -699,8 +699,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         child: Row(
           children: [
-            Text(time, style: AppTheme.monoStyle.copyWith(fontSize: 16)),
-            const Spacer(),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  time,
+                  style: AppTheme.monoStyle.copyWith(fontSize: 16),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             const Icon(Icons.access_time, size: 18, color: AppColors.textHint),
           ],
         ),

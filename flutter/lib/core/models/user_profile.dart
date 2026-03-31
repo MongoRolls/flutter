@@ -55,11 +55,18 @@ class UserProfile {
         dailyGoalMl: m['dailyGoalMl'] ?? 2300,
         wakeTime: m['wakeTime'] ?? '07:00',
         bedTime: m['bedTime'] ?? '23:00',
-        reminderIntervalMin: m['reminderIntervalMin'] ?? 90,
+        reminderIntervalMin: _sanitizeReminderInterval(m['reminderIntervalMin']),
         reminderStyle: m['reminderStyle'] ?? '温柔',
         notificationsEnabled: m['notificationsEnabled'] ?? true,
         onboardingCompleted: m['onboardingCompleted'] ?? false,
         cachedLat: (m['cachedLat'] as num?)?.toDouble(),
         cachedLon: (m['cachedLon'] as num?)?.toDouble(),
       );
+
+  /// 避免 0 或负数导致通知调度死循环。
+  static int _sanitizeReminderInterval(dynamic v) {
+    final n = (v is num) ? v.round() : 90;
+    if (n <= 0) return 90;
+    return n.clamp(1, 24 * 60);
+  }
 }

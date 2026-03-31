@@ -1,7 +1,7 @@
 name: ke_le_me
 description: "渴了么 - AI 智能喝水提醒"
 publish_to: "none"
-version: 2.5.1+1
+version: 3.0.0+1
 
 environment:
   sdk: ^3.11.1
@@ -20,6 +20,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   flutter_markdown: ^0.7.7+1
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:
@@ -27,8 +28,17 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  # 与 APK 使用同一套源图（mipmap-xxxhdpi），避免 macOS / 各端图标漂移
+  image_path: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+  macos:
+    generate: true

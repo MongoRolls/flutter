@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,7 @@ import '../../../core/providers/user_provider.dart';
 import '../../../core/services/backend_api_service.dart';
 import '../../../core/services/drink_sync_service.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../features/community/providers/heart_provider.dart';
 import '../../../features/plan/models/today_plan.dart';
 
 enum TestStatus { success, failure, info }
@@ -74,8 +76,7 @@ class DebugService {
         status: TestStatus.success,
         label: '触发即时通知',
         message: '已发送测试通知 ($style)',
-        detail:
-            '请查看系统通知栏。使用智能手表时，需先在系统或穿戴 App 中允许通知同步到手表后，表端才会显示。',
+        detail: '请查看系统通知栏。使用智能手表时，需先在系统或穿戴 App 中允许通知同步到手表后，表端才会显示。',
         timestamp: DateTime.now(),
       );
     } catch (e, st) {
@@ -176,6 +177,135 @@ class DebugService {
         status: TestStatus.failure,
         label: '查看当前状态',
         message: '获取状态失败',
+        detail: '$e\n$st',
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  // ============ Community / care contacts ============
+
+  /// `GET /api/care/peers/hydration` 原始 JSON（用于排查好友今日毫升不同步）
+  Future<TestResult> inspectPeersHydrationRaw() async {
+    final backend = BackendApiService.instance;
+    if (!backend.isAuthenticated) {
+      return TestResult(
+        status: TestStatus.info,
+        label: 'Peers hydration 原始响应',
+        message: '未登录后端，跳过请求',
+        timestamp: DateTime.now(),
+      );
+    }
+    try {
+      final now = DateTime.now();
+      final date =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final rows = await backend.getPeersHydration(
+        date: date,
+        tzOffset: now.timeZoneOffset.inMinutes,
+      );
+      return TestResult(
+        status: TestStatus.success,
+        label: 'Peers hydration 原始响应',
+        message: '共 ${rows.length} 条',
+        detail: const JsonEncoder.withIndent('  ').convert(rows),
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: 'Peers hydration 原始响应',
+        message: '请求失败',
+        detail: _dioDebugDetail(e, st),
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  /// `GET /api/care/contacts` 原始 JSON（排查心连心列表为空 / 字段不符）
+  Future<TestResult> inspectCareContactsRaw() async {
+    final backend = BackendApiService.instance;
+    if (!backend.isAuthenticated) {
+      return TestResult(
+        status: TestStatus.info,
+        label: 'Care contacts 原始响应',
+        message: '未登录后端，跳过请求',
+        timestamp: DateTime.now(),
+      );
+    }
+    try {
+      final list = await backend.getCareContacts();
+      return TestResult(
+        status: TestStatus.success,
+        label: 'Care contacts 原始响应',
+        message: '共 ${list.length} 条',
+        detail: const JsonEncoder.withIndent('  ').convert(list),
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: 'Care contacts 原始响应',
+        message: '请求失败',
+        detail: _dioDebugDetail(e, st),
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  String _dioDebugDetail(Object e, StackTrace st) {
+    if (e is DioException) {
+      final buf = StringBuffer('$e\n');
+      buf.writeln('status=${e.response?.statusCode}');
+      buf.writeln('data=${e.response?.data}');
+      buf.writeln(st);
+      return buf.toString();
+    }
+    return '$e\n$st';
+  }
+
+  TestResult inspectHeartContactsState(HeartProvider heart) {
+    try {
+      final contacts = heart.contacts;
+      final lines = contacts
+          .map(
+            (c) =>
+                '${c.id}: ${c.name} today=${c.mockTodayMl}ml goal=${c.mockDailyGoalMl}ml '
+                'hydrationVisible=${c.hydrationVisible}',
+          )
+          .join('\n');
+      return TestResult(
+        status: TestStatus.success,
+        label: '社区好友缓存',
+        message: '${contacts.length} 个联系人',
+        detail: lines.isEmpty ? '(空)' : lines,
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: '社区好友缓存',
+        message: '读取失败',
+        detail: '$e\n$st',
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  Future<TestResult> refreshHeartPeersHydration(HeartProvider heart) async {
+    try {
+      final ok = await heart.refreshPeersHydration();
+      return TestResult(
+        status: ok ? TestStatus.success : TestStatus.failure,
+        label: '刷新好友饮水摘要',
+        message: ok ? '已合并；成功时写入缓存' : '拉取失败（未覆写毫升缓存）',
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: '刷新好友饮水摘要',
+        message: '异常',
         detail: '$e\n$st',
         timestamp: DateTime.now(),
       );
@@ -342,8 +472,7 @@ class DebugService {
         status: TestStatus.success,
         label: '重置全部数据',
         message: '所有数据已完全清除，即将返回引导页',
-        detail:
-            '已清空：用户档案、饮水记录、历史归档、健康档案、会话摘要、今日计划、自定义提醒、通知；已重置后端会话并尝试重新登录',
+        detail: '已清空：用户档案、饮水记录、历史归档、健康档案、会话摘要、今日计划、自定义提醒、通知；已重置后端会话并尝试重新登录',
         timestamp: DateTime.now(),
       );
     } catch (e, st) {
@@ -389,7 +518,8 @@ class DebugService {
             : TestStatus.info,
         label: '手动同步',
         message: '同步完成: ${queueResult.name}',
-        detail: '待同步: ${syncService.pendingSyncCount}, 失败: ${syncService.failedCount}',
+        detail:
+            '待同步: ${syncService.pendingSyncCount}, 失败: ${syncService.failedCount}',
         timestamp: DateTime.now(),
       );
     } catch (e, st) {
@@ -440,6 +570,160 @@ class DebugService {
         status: TestStatus.failure,
         label: '清空失败队列',
         message: '清空失败',
+        detail: '$e\n$st',
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  // ============ Platform Info ============
+
+  /// 注入当月 Mock 饮水数据，用于预览首页统计图表效果。
+  ///
+  /// 生成策略：
+  /// - 当月 1 号至昨日，随机分布高/中/低/零摄入天
+  /// - 今日注入适量未达标数据（方便看「未达标」柱）
+  /// - 保留历史 history_ 键，保证连续天数显示正常
+  Future<TestResult> injectMockMonthlyData(UserProvider provider) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final today = now.day;
+      final goal = provider.profile.dailyGoalMl;
+
+      // ── 生成本月每日数据 ──────────────────────────────────────
+      // 模拟一个真实用户的喝水节律：大部分天达标，偶尔懈怠
+      final mockPattern = <int, int>{};
+
+      // 达标/高摄入的天（目标 × 100%~130%）
+      final goodDays = [1, 2, 4, 6, 7, 9, 11, 12, 14, 16, 17, 19, 21, 22];
+      // 未达标但有摄入（目标 × 50%~90%）
+      final slackDays = [3, 8, 13, 18, 23];
+      // 完全忘记喝水（0ml，不写入 map）
+      final zeroDays = [5, 10, 15, 20, 24];
+
+      for (var d = 1; d < today; d++) {
+        if (zeroDays.contains(d)) continue; // 不写 = 0ml
+        final int ml;
+        if (goodDays.contains(d)) {
+          // 达标：目标量的 100%～130%，加些随机感
+          final factor = 1.0 + (d % 7) * 0.04; // 1.00~1.24
+          ml = (goal * factor).round();
+        } else if (slackDays.contains(d)) {
+          // 未达标：目标量的 55%～85%
+          final factor = 0.55 + (d % 5) * 0.06; // 0.55~0.79
+          ml = (goal * factor).round();
+        } else {
+          // 默认：正常达标
+          ml = (goal * (0.95 + (d % 3) * 0.05)).round();
+        }
+        mockPattern[d] = ml;
+
+        // 同步写 history_ 键（连续天数计算依赖）
+        final dateStr =
+            '${now.year}-${now.month.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}';
+        await prefs.setInt('history_$dateStr', ml);
+      }
+
+      // 今日：注入约 60% 目标量（未达标，方便看灰柱）
+      final todayMl = (goal * 0.6).round();
+      mockPattern[today] = todayMl;
+
+      // ── 写入 SharedPreferences ───────────────────────────────
+      final monthKey = 'monthly_hits_${now.year}_${now.month}';
+      final monthMap = mockPattern.map((k, v) => MapEntry(k.toString(), v));
+      await prefs.setString(monthKey, jsonEncode(monthMap));
+
+      // 今日数据
+      final todayDateStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      await prefs.setString('today_date', todayDateStr);
+      await prefs.setInt('today_ml', todayMl);
+      await prefs.setString(
+        'today_logs',
+        jsonEncode([
+          {'time': '07:30', 'icon': '💧', 'description': '起床喝水', 'ml': 300},
+          {
+            'time': '10:00',
+            'icon': '🍵',
+            'description': '上午茶',
+            'ml': (goal * 0.15).round(),
+          },
+          {
+            'time': '13:30',
+            'icon': '💧',
+            'description': '午饭后',
+            'ml': (goal * 0.22).round(),
+          },
+          {
+            'time': '16:00',
+            'icon': '🧃',
+            'description': '下午果汁',
+            'ml': todayMl - 300 - (goal * 0.15).round() - (goal * 0.22).round(),
+          },
+        ]),
+      );
+
+      // 重载 provider
+      await provider.loadProfile();
+
+      final achievedCount = mockPattern.entries
+          .where((e) => e.value >= goal)
+          .length;
+      return TestResult(
+        status: TestStatus.success,
+        label: '注入 Mock 月度数据',
+        message: '已写入 ${mockPattern.length} 天数据，其中 $achievedCount 天达标',
+        detail:
+            '目标: ${goal}ml | 今日: ${todayMl}ml\n'
+            'key: $monthKey\n'
+            '数据预览: ${const JsonEncoder.withIndent('  ').convert(monthMap)}',
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: '注入 Mock 月度数据',
+        message: '注入失败: $e',
+        detail: '$e\n$st',
+        timestamp: DateTime.now(),
+      );
+    }
+  }
+
+  /// 一键写入「正常演示用户」档案 + 本月/今日饮水 Mock（适合联调首页、日历、同步）。
+  Future<TestResult> injectFullDemoTestData(UserProvider provider) async {
+    try {
+      provider.updateProfile(
+        UserProfile(
+          nickname: '演示用户',
+          gender: '女',
+          activityLevel: '中等',
+          weight: 58,
+          dailyGoalMl: 2000,
+          wakeTime: '07:30',
+          bedTime: '23:00',
+          reminderIntervalMin: 60,
+          reminderStyle: '温柔',
+          notificationsEnabled: true,
+          onboardingCompleted: true,
+        ),
+      );
+      final inner = await injectMockMonthlyData(provider);
+      return TestResult(
+        status: inner.status,
+        label: '插入完整测试数据',
+        message:
+            '已写入演示档案（目标 2000ml、已完成引导）并注入本月与今日饮水；'
+            '${inner.message}',
+        detail: inner.detail,
+        timestamp: DateTime.now(),
+      );
+    } catch (e, st) {
+      return TestResult(
+        status: TestStatus.failure,
+        label: '插入完整测试数据',
+        message: '注入失败: $e',
         detail: '$e\n$st',
         timestamp: DateTime.now(),
       );

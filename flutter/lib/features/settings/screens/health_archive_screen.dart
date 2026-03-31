@@ -1,14 +1,11 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../common/widgets/app_toast.dart';
 import '../../../common/widgets/glass_card.dart';
 import '../../../core/models/memory_fact.dart';
-import '../../../core/services/backend_api_service.dart';
 import '../../../core/services/memory_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/backend_api_error_message.dart';
 
 class HealthArchiveScreen extends StatefulWidget {
   const HealthArchiveScreen({super.key});
@@ -299,7 +296,7 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
     );
   }
 
-  /// 二次确认后硬删除；已登录时先调后端再删本地（见 OpenSpec health-archive-delete）。
+  /// 二次确认后硬删除（仅本地 Hive；记忆未接入后端同步）。
   Future<void> _deleteFact(MemoryFact fact) async {
     final confirmed = await showAppConfirmDialog(
       context: context,
@@ -312,24 +309,6 @@ class _HealthArchiveScreenState extends State<HealthArchiveScreen> {
     );
 
     if (confirmed != true) return;
-
-    final backend = BackendApiService.instance;
-    if (backend.isAuthenticated) {
-      try {
-        await backend.deleteMemoryFact(fact.id);
-      } on DioException catch (e) {
-        final code = e.response?.statusCode;
-        if (code != 404) {
-          if (!mounted) return;
-          AppToast.error(context, backendApiErrorMessage(e));
-          return;
-        }
-      } catch (e) {
-        if (!mounted) return;
-        AppToast.error(context, backendApiErrorMessage(e));
-        return;
-      }
-    }
 
     try {
       await MemoryService.instance.deleteFact(fact.id);
