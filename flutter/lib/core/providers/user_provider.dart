@@ -136,6 +136,31 @@ class UserProvider extends ChangeNotifier {
     saveProfile();
   }
 
+  /// [SharedPreferences.clear] 之后调用：同步内存中的饮水/打卡等状态，避免 UI 仍显示旧数据。
+  Future<void> resetRuntimeStateAfterStorageClear() async {
+    _profile = UserProfile();
+    _todayMl = 0;
+    _logs.clear();
+    _monthlyHits.clear();
+    _streakDays = 0;
+    _todayDate = _currentDate;
+    _drinkPresets = List.of(DrinkPreset.defaults);
+    _weatherData = null;
+    _goalPrediction = null;
+    _dynamicGoalMl = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_profile', jsonEncode(_profile.toMap()));
+    await prefs.setString('today_date', _todayDate);
+    await prefs.setInt('today_ml', 0);
+    await prefs.setString('today_logs', '[]');
+    await prefs.setString(
+      'drink_presets',
+      jsonEncode(_drinkPresets.map((e) => e.toMap()).toList()),
+    );
+    notifyListeners();
+  }
+
   // ── 杯子预设管理 ──
 
   void _loadDrinkPresets(SharedPreferences prefs) {

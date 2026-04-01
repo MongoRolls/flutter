@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../../core/utils/app_exit.dart';
 import '../../community/providers/heart_provider.dart';
 import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../common/widgets/glass_card.dart';
@@ -610,19 +611,15 @@ class _DebugScreenState extends State<DebugScreen> {
               '重置全部数据',
               '确认重置所有数据？此操作不可恢复，将返回引导页。\n\n将清空：用户档案、饮水记录、健康档案、会话摘要、今日计划、自定义提醒，并重置后端登录状态。',
               () async {
-                final result = await DebugService.instance.clearAllData(_p);
+                final result = await DebugService.instance.clearAllData(
+                  _p,
+                  heartProvider: widget.heartProvider,
+                );
                 if (mounted) {
                   setState(() => _results.insert(0, result));
                   if (result.status == TestStatus.success) {
-                    Future.delayed(const Duration(milliseconds: 500), () {
-                      if (mounted) {
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          '/onboarding',
-                          (route) => false,
-                        );
-                      }
-                    });
+                    await Future<void>.delayed(const Duration(milliseconds: 300));
+                    await exitAppAfterReset();
                   }
                 }
                 return result;

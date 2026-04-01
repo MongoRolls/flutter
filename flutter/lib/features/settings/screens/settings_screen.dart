@@ -6,6 +6,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/wake_bed_time.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/utils/app_exit.dart';
+import '../../community/providers/heart_provider.dart';
 import '../../../core/utils/app_version.dart';
 import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../common/widgets/glass_card.dart';
@@ -16,8 +18,13 @@ import 'watch_preview_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final UserProvider userProvider;
+  final HeartProvider heartProvider;
 
-  const SettingsScreen({super.key, required this.userProvider});
+  const SettingsScreen({
+    super.key,
+    required this.userProvider,
+    required this.heartProvider,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -756,40 +763,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-          if (!kReleaseMode) ...[
-            const SizedBox(height: 12),
-            const Text(
-              '清除本地数据并返回引导页（不可恢复）',
-              style: TextStyle(fontSize: 12, color: AppColors.textHint),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _onResetAllData,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.orange,
-                  side: const BorderSide(color: AppColors.orange, width: 1),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+          const SizedBox(height: 12),
+          const Text(
+            '清除本地数据并返回引导页（不可恢复）',
+            style: TextStyle(fontSize: 12, color: AppColors.textHint),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _onResetAllData,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.orange,
+                side: const BorderSide(color: AppColors.orange, width: 1),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                icon: const Icon(
-                  Icons.restore,
-                  size: 18,
+              ),
+              icon: const Icon(
+                Icons.restore,
+                size: 18,
+                color: AppColors.orange,
+              ),
+              label: const Text(
+                '重置全部数据',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
                   color: AppColors.orange,
-                ),
-                label: const Text(
-                  '重置全部数据',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.orange,
-                  ),
                 ),
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -820,28 +825,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _onResetAllData() async {
-    if (kReleaseMode) return;
     final confirmed = await showAppConfirmDialog(
       context: context,
       title: '确认操作',
       message:
-          '确认重置所有数据？此操作不可恢复，将返回引导页。\n\n将清空：用户档案、饮水记录、健康档案、会话摘要、今日计划、自定义提醒，并重置后端登录状态。',
+          '确认重置所有数据？此操作不可恢复。\n\n将清空：用户档案、饮水记录、健康档案、会话摘要、今日计划、自定义提醒，并重置后端登录状态。\n\n重置完成后应用将自动退出，请重新打开。',
       cancelLabel: '取消',
       confirmLabel: '确认',
       isDestructive: true,
     );
     if (confirmed != true || !mounted) return;
-    final result = await DebugService.instance.clearAllData(_p);
+    final result = await DebugService.instance.clearAllData(
+      _p,
+      heartProvider: widget.heartProvider,
+    );
     if (!mounted) return;
     if (result.status == TestStatus.success) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/onboarding',
-          (route) => false,
-        );
-      });
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await exitAppAfterReset();
     } else {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(

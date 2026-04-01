@@ -411,7 +411,10 @@ class DebugService {
     }
   }
 
-  Future<TestResult> clearAllData(UserProvider provider) async {
+  Future<TestResult> clearAllData(
+    UserProvider provider, {
+    HeartProvider? heartProvider,
+  }) async {
     try {
       // 1. 清空 SharedPreferences（用户档案、饮水记录、历史等）
       final prefs = await SharedPreferences.getInstance();
@@ -465,13 +468,14 @@ class DebugService {
         debugPrint('Debug clearAllData: ensureAuthenticated failed: $e');
       }
 
-      // 9. 重置 provider 内存状态
-      provider.updateProfile(UserProfile());
+      // 9. 重置 provider 内存状态（含今日饮水/日志/打卡等，仅 updateProfile 会残留旧内存）
+      await provider.resetRuntimeStateAfterStorageClear();
+      heartProvider?.resetLocalContacts();
 
       return TestResult(
         status: TestStatus.success,
         label: '重置全部数据',
-        message: '所有数据已完全清除，即将返回引导页',
+        message: '所有数据已完全清除，应用将退出',
         detail: '已清空：用户档案、饮水记录、历史归档、健康档案、会话摘要、今日计划、自定义提醒、通知；已重置后端会话并尝试重新登录',
         timestamp: DateTime.now(),
       );

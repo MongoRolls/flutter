@@ -123,7 +123,10 @@ class _MainShellState extends State<MainShell> {
             heartProvider: widget.heartProvider,
             plazaProvider: _plazaProvider,
           ),
-          SettingsScreen(userProvider: widget.userProvider),
+          SettingsScreen(
+            userProvider: widget.userProvider,
+            heartProvider: widget.heartProvider,
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

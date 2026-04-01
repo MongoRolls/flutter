@@ -15,6 +15,12 @@ class HeartProvider extends ChangeNotifier {
 
   List<CareContact> get contacts => List.unmodifiable(_contacts);
 
+  /// [SharedPreferences.clear] 或全量重置后调用，避免内存中仍保留旧队友列表。
+  void resetLocalContacts() {
+    _contacts = [];
+    notifyListeners();
+  }
+
   /// 初始化加载（无预置 mock；首次为空列表）
   Future<void> load() async {
     try {

@@ -301,6 +301,28 @@ class NotificationService {
   }
 
   Future<void> showTestNotification({String reminderStyle = '温柔'}) async {
+    final prefs = await SharedPreferences.getInstance();
+    try {
+      final remind = await BackendApiService.instance.fetchLatestCareRemind();
+      if (remind != null) {
+        final remindId = remind['id'] as String?;
+        final body = remind['templateBody'] as String?;
+        final consumed = prefs.getString(_consumedCareRemindIdPrefKey);
+        if (remindId != null &&
+            body != null &&
+            body.isNotEmpty &&
+            remindId != consumed) {
+          await showPeerCareNotification(
+            title: '渴了么',
+            body: '好友提醒你：$body',
+          );
+          await prefs.setString(_consumedCareRemindIdPrefKey, remindId);
+        }
+      }
+    } catch (e) {
+      debugPrint('showTestNotification peer care fetch failed: $e');
+    }
+
     final messages = switch (reminderStyle) {
       '活泼' => _livelyMessages,
       '严肃' => _seriousMessages,
