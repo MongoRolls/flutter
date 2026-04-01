@@ -38,7 +38,7 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  # 与 APK 使用同一套源图（mipmap-xxxhdpi），避免 macOS / 各端图标漂移
-  image_path: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+  # 单一 1024×1024 源图，生成各端 mipmaps / AppIcon（避免比例不一致）
+  image_path: assets/icon/app_icon.png
   macos:
     generate: true

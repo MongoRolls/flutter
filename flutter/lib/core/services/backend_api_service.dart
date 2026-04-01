@@ -408,6 +408,20 @@ class BackendApiService {
     return r.data as Map<String, dynamic>;
   }
 
+  /// 获取当前用户最近收到的一条好友提醒（含模板正文），无则返回 null
+  Future<Map<String, dynamic>?> fetchLatestCareRemind() async {
+    try {
+      final r = await get('/api/care/remind/latest');
+      final data = r.data;
+      if (data == null || data is! Map<String, dynamic> || data.isEmpty) {
+        return null;
+      }
+      return data;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Team challenges ───────────────────────────────────────
 
   Future<Map<String, dynamic>> getChallengesMine({

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../common/widgets/scroll_wheel_time_picker.dart';
@@ -6,7 +7,9 @@ import '../../../core/utils/wake_bed_time.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/utils/app_version.dart';
+import '../../../common/widgets/app_confirm_dialog.dart';
 import '../../../common/widgets/glass_card.dart';
+import '../../debug/services/debug_service.dart';
 import '../widgets/voice_tone_prefs.dart';
 import 'health_archive_screen.dart';
 import 'watch_preview_screen.dart';
@@ -389,11 +392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.watch_outlined,
-                size: 14,
-                color: AppColors.textHint,
-              ),
+              Icon(Icons.watch_outlined, size: 14, color: AppColors.textHint),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -420,7 +419,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _sectionTitle('⌚', 'Apple Watch'),
           const SizedBox(height: 4),
           const Text(
-            '手表端能力预览（规划中），无独立安装包',
+            '手表端界面预览',
             style: TextStyle(fontSize: 12, color: AppColors.textHint),
           ),
           const SizedBox(height: 8),
@@ -468,7 +467,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                           Text(
-                            '表盘与通知样式示意（占位）',
+                            '表盘与通知样式示意',
                             style: TextStyle(
                               fontSize: 11,
                               color: AppColors.textHint,
@@ -555,24 +554,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _sectionTitle('⏰', '提醒时间'),
           const SizedBox(height: 6),
-          const Text(
-            '同一天内起床须早于就寝；与引导页相同的时间滚轮',
-            style: TextStyle(fontSize: 12, color: AppColors.textHint, height: 1.35),
-          ),
           const SizedBox(height: 12),
 
-          _timeRow(
-            '起床时间',
-            _wakeTime,
-            _onSettingsWakeTimePicked,
-          ),
+          _timeRow('起床时间', _wakeTime, _onSettingsWakeTimePicked),
           Container(height: 1, color: AppColors.divider),
           const SizedBox(height: 12),
-          _timeRow(
-            '就寝时间',
-            _bedTime,
-            _onSettingsBedTimePicked,
-          ),
+          _timeRow('就寝时间', _bedTime, _onSettingsBedTimePicked),
 
           const SizedBox(height: 16),
           _label('提醒间隔'),
@@ -752,15 +739,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: _showTestReminder,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               icon: const Icon(
                 Icons.notifications_active_outlined,
                 color: Colors.white,
                 size: 18,
               ),
-              label: const Text('触发喝水提醒'),
+              label: const Text(
+                '触发喝水提醒',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
+          if (!kReleaseMode) ...[
+            const SizedBox(height: 12),
+            const Text(
+              '清除本地数据并返回引导页（不可恢复）',
+              style: TextStyle(fontSize: 12, color: AppColors.textHint),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _onResetAllData,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.orange,
+                  side: const BorderSide(color: AppColors.orange, width: 1),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.restore,
+                  size: 18,
+                  color: AppColors.orange,
+                ),
+                label: const Text(
+                  '重置全部数据',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.orange,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -777,6 +806,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _onVersionTap() {
+    if (kReleaseMode) return;
     final now = DateTime.now();
     if (_lastDebugTap != null && now.difference(_lastDebugTap!).inSeconds > 3) {
       _debugTapCount = 0;
@@ -789,15 +819,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _onResetAllData() async {
+    if (kReleaseMode) return;
+    final confirmed = await showAppConfirmDialog(
+      context: context,
+      title: '确认操作',
+      message:
+          '确认重置所有数据？此操作不可恢复，将返回引导页。\n\n将清空：用户档案、饮水记录、健康档案、会话摘要、今日计划、自定义提醒，并重置后端登录状态。',
+      cancelLabel: '取消',
+      confirmLabel: '确认',
+      isDestructive: true,
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await DebugService.instance.clearAllData(_p);
+    if (!mounted) return;
+    if (result.status == TestStatus.success) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/onboarding',
+          (route) => false,
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.detail != null
+                ? '${result.message}\n${result.detail}'
+                : result.message,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+          ),
+          backgroundColor: AppColors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildVersionInfo() {
     return GestureDetector(
       onTap: _onVersionTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Column(
+        child: const Column(
           children: [
-            const Text(
+            Text(
               '渴了么',
               style: TextStyle(
                 fontSize: 14,
@@ -805,8 +878,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 6),
-            const Text(
+            SizedBox(height: 6),
+            Text(
               AppVersion.display,
               style: TextStyle(
                 fontSize: 22,
@@ -815,8 +888,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontFamily: 'SpaceMono',
               ),
             ),
-            const SizedBox(height: 4),
-            const Text(
+            SizedBox(height: 4),
+            Text(
               AppVersion.buildDate,
               style: TextStyle(fontSize: 12, color: AppColors.textHint),
             ),

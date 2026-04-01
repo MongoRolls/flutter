@@ -8,6 +8,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../constants/peer_remind_templates.dart';
+import 'backend_api_service.dart';
 
 /// 本地通知（喝水 / 自定义 / 心连心等）。
 ///
@@ -26,6 +27,9 @@ class NotificationService {
 
   /// 在社区 Tab 有队友时写入：本地定时喝水提醒改用 [kPeerRemindBodiesForNotifications]。
   static const waterRemindersUsePeerCopyPrefKey = 'water_reminders_use_peer_copy';
+
+  /// SharedPreferences key：记录已消费的最新好友提醒 ID，避免重复使用同一条。
+  static const _consumedCareRemindIdPrefKey = 'consumed_care_remind_id';
 
   /// 与普通日程喝水提醒分离：好友「心连心」模板提醒（接收端展示用）
   static const _peerCareChannelId = 'keleme_peer_care';
@@ -190,9 +194,10 @@ class NotificationService {
     final bedHour = int.parse(bedParts[0]);
     final bedMinute = int.parse(bedParts[1]);
 
+    final prefs = await SharedPreferences.getInstance();
+
     final usePeer = usePeerRemindBodies ??
-        (await SharedPreferences.getInstance())
-            .getBool(waterRemindersUsePeerCopyPrefKey) ??
+        prefs.getBool(waterRemindersUsePeerCopyPrefKey) ??
         false;
 
     final List<String> messages = usePeer
@@ -202,6 +207,24 @@ class NotificationService {
             '严肃' => _seriousMessages,
             _ => _gentleMessages,
           };
+
+    // 通过接口获取最近收到的好友提醒；若 ID 未消费过，首条通知使用该模板文案
+    String? peerCareBody;
+    String? peerCareRemindId;
+    try {
+      final remind = await BackendApiService.instance.fetchLatestCareRemind();
+      if (remind != null) {
+        final remindId = remind['id'] as String?;
+        final body = remind['templateBody'] as String?;
+        final consumed = prefs.getString(_consumedCareRemindIdPrefKey);
+        if (remindId != null && body != null && remindId != consumed) {
+          peerCareBody = body;
+          peerCareRemindId = remindId;
+        }
+      }
+    } catch (_) {
+      // 网络异常时不阻塞通知调度
+    }
 
     final rng = Random();
     var id = 0;
@@ -229,7 +252,14 @@ class NotificationService {
 
       while (current.isBefore(bedEnd)) {
         if (current.isAfter(now)) {
-          final msg = messages[rng.nextInt(messages.length)];
+          // 首条通知使用好友的模板文案（如果有新的未消费提醒）
+          final String msg;
+          if (peerCareBody != null) {
+            msg = '好友提醒你：$peerCareBody';
+            peerCareBody = null; // 仅首条使用
+          } else {
+            msg = messages[rng.nextInt(messages.length)];
+          }
           await _plugin.zonedSchedule(
             id: id,
             title: '渴了么',
@@ -263,6 +293,11 @@ class NotificationService {
     }
 
     debugPrint('NotificationService: scheduled $id notifications');
+
+    // 标记该好友提醒已消费，下次调度不再重复使用
+    if (peerCareRemindId != null) {
+      await prefs.setString(_consumedCareRemindIdPrefKey, peerCareRemindId);
+    }
   }
 
   Future<void> showTestNotification({String reminderStyle = '温柔'}) async {

@@ -9,6 +9,7 @@ import {
 } from '../constants/friend-code.js';
 import { MAX_CARE_CONTACTS } from '../constants/care-limits.js';
 import {
+  PEER_REMIND_TEMPLATE_BODY,
   isValidPeerRemindTemplateId,
 } from '../constants/peer-remind.js';
 import { prisma } from '../config/prisma.js';
@@ -260,6 +261,20 @@ export async function sendPeerRemind(
   return prisma.careReminder.create({
     data: { ownerId, contactId, templateId },
   });
+}
+
+/** 获取当前用户最近收到的一条好友提醒（contactId 指向当前用户），附带模板正文 */
+export async function getLatestReceivedRemind(userId: string) {
+  const row = await prisma.careReminder.findFirst({
+    where: { contactId: userId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, ownerId: true, templateId: true, createdAt: true },
+  });
+  if (!row) return null;
+  return {
+    ...row,
+    templateBody: PEER_REMIND_TEMPLATE_BODY[row.templateId as keyof typeof PEER_REMIND_TEMPLATE_BODY] ?? '',
+  };
 }
 
 export async function deleteContact(userId: string, recordId: string): Promise<void> {

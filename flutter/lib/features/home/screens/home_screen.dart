@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:fl_chart/fl_chart.dart';
@@ -97,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _onLogoTap() {
+    if (kReleaseMode) return;
     final now = DateTime.now();
     if (_lastLogoTap == null ||
         now.difference(_lastLogoTap!) > const Duration(seconds: 2)) {

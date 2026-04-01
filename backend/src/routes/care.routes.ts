@@ -133,6 +133,21 @@ router.get(
   },
 );
 
+// GET /api/care/remind/latest  — 当前用户最近收到的一条好友提醒
+router.get('/remind/latest', auth, async (req, res, next) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user.id;
+    const row = await CareService.getLatestReceivedRemind(userId);
+    if (!row) {
+      res.json(null);
+      return;
+    }
+    res.json(row);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/care/remind  { contactId, templateId }
 router.post(
   '/remind',
