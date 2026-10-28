@@ -44,13 +44,16 @@ function SunIcon() {
   );
 }
 
+// A stable subscription keeps the SSR and first hydration render identical.
+const subscribeToHydration = () => () => {};
+
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = React.useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false
+  );
 
   const isDark = resolvedTheme === "dark";
   const showSun = mounted && isDark;

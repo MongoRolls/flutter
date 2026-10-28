@@ -79,7 +79,7 @@ jobs:
     - name: Check SDK hints, not a complete vulnerability scan
       run: |
         echo "::warning::Pub coverage is limited to SDK advisory hints. A false flag cannot prove upstream availability or absence of vulnerabilities."
-        flutter pub outdated --json --up-to-date --transitive > /tmp/pub-hints.json
+        flutter pub outdated --json --up-to-date > /tmp/pub-hints.json
         python3 ../.github/scripts/check_pub_hints.py pubspec.lock < /tmp/pub-hints.json
   test-backend:
     name: Backend compatibility tests
@@ -105,4 +105,26 @@ jobs:
       env:
         DATABASE_URL: postgresql://localhost:5432/unused
       run: pnpm exec prisma generate
+    - run: pnpm build
+  test-web:
+    name: Web compatibility checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    env:
+      COREPACK_ENABLE_PROJECT_SPEC: '0'
+      npm_config_manage_package_manager_versions: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    - run: npm install --global --ignore-scripts pnpm@8.15.9
+    - run: pnpm install --frozen-lockfile --ignore-scripts
+    - run: pnpm lint
     - run: pnpm build

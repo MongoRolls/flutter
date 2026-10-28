@@ -51,3 +51,24 @@ future-only dependencies with null `current`; these are skipped only when absent
 from the lock. Every locked non-SDK package must still have matching current
 version data; missing current versions or omitted locked packages fail closed.
 The advisory-source availability limitation above still applies.
+
+
+## Web compatible update
+
+Next and eslint-config-next move together from 16.2.1 to 16.4.3; the framework
+stays on major 16. Other dependencies refresh within their existing major ranges,
+with no overrides or business rewrite. The theme toggle replaces effect-driven
+mount state with matching server/hydration snapshots via useSyncExternalStore
+(https://react.dev/reference/react/useSyncExternalStore#adding-support-for-server-rendering),
+keeping the initial button disabled and enabling theme selection after hydration.
+This satisfies the updated React hooks lint rule without disabling that rule.
+
+Local lint and TypeScript checks pass. Local production build is blocked by Google
+Fonts fetch failures; a separate hosted CI job runs the real lint/build. The
+updated guarded audit scans 600 dependencies: 1 low, 0 moderate/high/critical,
+exit 1. The remaining deepmerge advisory has no published fixed version according
+to the audit response; it is retained as a failure, not ignored.
+
+Pub JSON output always includes transitive packages; do not pass --transitive
+alongside --json (the SDK rejects that combination). Lock coverage remains checked
+by the Python script.
