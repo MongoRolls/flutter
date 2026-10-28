@@ -8,6 +8,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -17,12 +20,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
+      - name: Select compatible Android JDK
+        run: flutter config --jdk-dir="$JAVA_HOME"
+
       - run: flutter pub get
+
+      - name: Generate Hive adapters
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - run: flutter analyze
 
@@ -31,7 +47,6 @@ jobs:
       - run: >
           flutter build apk --split-per-abi
           --dart-define=BACKEND_URL=https://api.mongorolls.cn
-          --dart-define=DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -46,12 +61,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
       - run: flutter pub get
+
+      - name: Generate Hive adapters
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - run: >
           flutter build web

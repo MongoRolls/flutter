@@ -38,47 +38,33 @@ class AiService {
   final AiConfig config;
 
   AiService({required this.config})
-      : _dio = config.useBackendProxy
-            ? BackendApiService.instance.createDio(
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 120),
-              )
-            : Dio(BaseOptions(
-                baseUrl: config.baseUrl,
-                headers: {
-                  'Authorization': 'Bearer ${config.apiKey}',
-                  'Content-Type': 'application/json',
-                },
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 120),
-              ));
+      : _dio = BackendApiService.instance.createDio(
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 120),
+        );
 
   /// 流式发送消息，返回 SSE 事件流
   Stream<AiStreamEvent> sendMessageStream({
     required List<Map<String, dynamic>> messages,
     required List<Map<String, dynamic>> tools,
   }) async* {
-    if (!config.useBackendProxy && config.apiKey.isEmpty) {
-      yield const AiError('API Key 未配置，请在设置中配置 Key 或启用后端代理');
+    if (!BackendApiService.instance.isAuthenticated) {
+      yield const AiError('AI 服务尚未连接，请先登录或稍后重试');
       return;
     }
 
     try {
       final requestBody = <String, dynamic>{
-        if (!config.useBackendProxy) 'model': config.model,
         'messages': messages,
         'tools': tools.isEmpty ? null : tools,
-        if (!config.useBackendProxy) 'tool_choice': tools.isEmpty ? null : 'auto',
         'temperature': config.temperature,
         'max_tokens': config.maxTokens,
         'stream': true,
       }..removeWhere((_, v) => v == null);
 
-      final endpoint = config.useBackendProxy
-          ? 'chat'
-          : '/v1/chat/completions';
+      const endpoint = 'chat';
 
-      debugPrint('=== ${config.useBackendProxy ? "Backend Proxy" : "DeepSeek"} API Request ===');
+      debugPrint('=== Backend Proxy API Request ===');
       debugPrint('endpoint: $endpoint, messages count: ${messages.length}');
       for (final m in messages) {
         final role = m['role'];
@@ -207,8 +193,9 @@ class AiService {
         } catch (_) {}
         debugPrint('DeepSeek API $status error: $apiErrMsg\nraw: ${e.response?.data}');
         msg = 'API 错误 ($status)${apiErrMsg != null ? ': $apiErrMsg' : ''}';
-        if (status == 401) msg = 'API Key 无效或已过期，请在设置中更换 Key';
+        if (status == 401) msg = '登录状态已过期，请重新登录后再试';
         if (status == 400) msg = 'API 请求格式错误${apiErrMsg != null ? ': $apiErrMsg' : ''}';
+        if (status != null && status >= 500) msg = 'AI 服务暂时不可用，请稍后重试';
         if (status == 429) msg = '请求太频繁，请稍后再试';
       } else if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {

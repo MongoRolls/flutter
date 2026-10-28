@@ -27,7 +27,7 @@ flutter clean && flutter pub get         # Reset build cache if issues arise
 ```
 
 CI runs `flutter analyze` then `flutter test` before building (see `.github/workflows/build.yml`).
-Both must pass. The APK build injects `DEEPSEEK_API_KEY` via `--dart-define`.
+Both must pass. Provider API keys stay on the backend; never inject them into client builds.
 
 For Hive model changes, regenerate adapters:
 ```bash
@@ -161,7 +161,7 @@ Constructor injection only. Pass providers explicitly — no GetIt or service lo
 
 ### Networking
 
-`dio` for HTTP requests. `BackendApiService` defaults to **`https://api.mongorolls.cn`**; override with `--dart-define=BACKEND_URL=...` (e.g. `http://localhost:3000` for local backend), or shorter: `--dart-define-from-file=dart_defines/dev.env`, or from `flutter/` run **`./scripts/run_dev.sh`** (defaults to `-d macos`). AI backend calls go through `AiService`. The AI API key is injected at build time via `--dart-define=DEEPSEEK_API_KEY=...`.
+`dio` for HTTP requests. `BackendApiService` defaults to **`https://api.mongorolls.cn`**; override with `--dart-define=BACKEND_URL=...` (e.g. `http://localhost:3000` for local backend), or shorter: `--dart-define-from-file=dart_defines/dev.env`, or from `flutter/` run **`./scripts/run_dev.sh`** (defaults to `-d macos`). AI backend calls go through `AiService`. AI calls use the authenticated backend proxy. Never supply provider API keys through `--dart-define` or client preferences.
 
 ### Backend / VPS（仓库约定）
 
