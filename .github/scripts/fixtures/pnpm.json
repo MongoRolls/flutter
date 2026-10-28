@@ -1,0 +1,7 @@
+{
+  "manifest": {"dependencies": {"example": "^1.0.0"}},
+  "v6": {"lockfileVersion": "6.0", "dependencies": {"example": {"specifier": "^1.0.0", "version": "1.0.0"}}, "packages": {"/example@1.0.0": {"resolution": {"integrity": "fixture"}}}},
+  "v9": {"lockfileVersion": "9.0", "importers": {".": {"dependencies": {"example": {"specifier": "^1.0.0", "version": "1.0.0"}}}}, "packages": {"example@1.0.0": {"resolution": {"integrity": "fixture"}}}, "snapshots": {"example@1.0.0": {}}},
+  "cleanReport": {"advisories": {}, "metadata": {"totalDependencies": 1, "vulnerabilities": {"info": 0, "low": 0, "moderate": 0, "high": 0, "critical": 0}}},
+  "emptyTreeReport": {"advisories": {}, "metadata": {"totalDependencies": 0, "vulnerabilities": {"info": 0, "low": 0, "moderate": 0, "high": 0, "critical": 0}}}
+}
