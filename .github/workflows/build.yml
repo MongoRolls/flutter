@@ -23,9 +23,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+
+      - name: Select compatible Android JDK
+        run: flutter config --jdk-dir="$JAVA_HOME"
 
       - run: flutter pub get
 
