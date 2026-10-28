@@ -26,3 +26,28 @@ python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
 Run `python3 ../.github/scripts/audit_pnpm.py` from each Node project directory
 with its exact pnpm version on PATH. The response and real exit status remain
 visible in CI; findings are not suppressed or converted into a zero count.
+
+
+## Backend compatible update
+
+Backend direct packages and their transitive graph are refreshed within existing
+major ranges (including Express 4, Prisma 7 and Vitest 3). Express's declaration
+inference uses @types/express-serve-static-core, now an explicit dev dependency.
+HTTP regressions cover proxy-address trust, valid proxy behavior, JSON limits,
+invalid limit rejection and compressed-body error recovery without loading
+application secrets or connecting to a database. A separate CI job runs all
+backend tests, generates Prisma client with an unused local database URL, and
+builds. No database connection/migration is performed.
+
+Local audit after compatible updates: 415 dependencies, 0 low / 3 moderate /
+1 high / 2 critical; still exit 1. Remaining high: Zod 3 (fix requires 4.6.6+;
+the application uses ZodError.errors, so a blind upgrade would break validation).
+Remaining critical/moderate: Vitest 3's tinypool/mocker graph; requires a reviewed
+test-runner migration. Local 8 tests pass; client generation was blocked by
+HTTP 403 from binaries.prisma.sh, so full backend build needs hosted CI.
+
+Pub hints are matched to the checked-in lock versions. `pub outdated` may include
+future-only dependencies with null `current`; these are skipped only when absent
+from the lock. Every locked non-SDK package must still have matching current
+version data; missing current versions or omitted locked packages fail closed.
+The advisory-source availability limitation above still applies.

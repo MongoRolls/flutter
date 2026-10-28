@@ -79,6 +79,21 @@ class AuditTests(unittest.TestCase):
         self.pub['packages'][0]['isCurrentAffectedByAdvisory'] = True
         self.assertEqual(check(self.pub), ['example'])
 
+    def test_pub_future_only_packages_are_not_installed_dependencies(self):
+        self.pub['packages'].append({'package': 'future-only', 'current': None,
+                                     'isCurrentAffectedByAdvisory': False})
+        self.assertEqual(check(self.pub, {'example': '1.0.0'}), [])
+
+    def test_pub_locked_package_without_current_fails(self):
+        self.pub['packages'][0]['current'] = None
+        with self.assertRaises(ValueError):
+            check(self.pub, {'example': '1.0.0'})
+
+    def test_pub_omitted_or_mismatched_locked_package_fails(self):
+        for locked in ({}, {'missing': '1.0.0'}, {'example': '2.0.0'}):
+            with self.subTest(locked=locked), self.assertRaises(ValueError):
+                check(self.pub, locked)
+
     def test_pub_unknown_flags_fail(self):
         for value in (None, 0, 1, '', 'false', [], {}):
             with self.subTest(value=value):
