@@ -94,6 +94,13 @@ class AuditTests(unittest.TestCase):
             with self.subTest(locked=locked), self.assertRaises(ValueError):
                 check(self.pub, locked)
 
+    def test_pub_skips_only_explicit_sdk_packages(self):
+        self.pub['packages'].append({'package': 'flutter', 'current': {'version': '0.0.0'},
+                                     'isCurrentAffectedByAdvisory': False})
+        self.assertEqual(check(self.pub, {'example': '1.0.0'}, {'flutter'}), [])
+        with self.assertRaises(ValueError):
+            check(self.pub, {'example': '1.0.0'})
+
     def test_pub_unknown_flags_fail(self):
         for value in (None, 0, 1, '', 'false', [], {}):
             with self.subTest(value=value):
